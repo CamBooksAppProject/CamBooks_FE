@@ -186,4 +186,3 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
-r
