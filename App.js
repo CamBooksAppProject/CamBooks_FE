@@ -33,6 +33,7 @@ import FreeBoardDetailPage from "./src/Screens/Pages/FreeBoardDetailPage";
 import ChatDetailPage from "./src/Screens/Pages/ChatDetailPage";
 
 import SearchingPage from "./src/Screens/Pages/SearchingPage";
+import SearchOutput from "./src/Screens/Pages/SearchOutput";
 import NotificationPage from "./src/Screens/Pages/NotificationPage";
 import SettingPage from "./src/Screens/Pages/SettingPage";
 import SettingModal from "./src/Screens/Pages/SettingModal";
@@ -73,43 +74,36 @@ export default function App() {
                 component={RouteScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="LoginScreen"
                 component={LoginScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="SignUpScreen"
                 component={SignUpScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="AuthenticationScreen"
                 component={AuthenticationScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="FindId"
                 component={FindId}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="FindPw"
                 component={FindPw}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="ChangePw"
                 component={ChangePw}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="ChangeAddr"
                 component={ChangeAddr}
@@ -120,91 +114,76 @@ export default function App() {
                 component={MyInfo}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="MyPost"
                 component={MyPost}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="SalesHistory"
                 component={SalesHistory}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="PurchaseHistory"
                 component={PurchaseHistory}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="GuestScreen"
                 component={GuestScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="HomeScreen"
                 component={HomeScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="CommunityScreen"
                 component={CommunityScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="ChatScreen"
                 component={ChatScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="ScrapScreen"
                 component={ScrapScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="ProfileScreen"
                 component={ProfileScreen}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="CommnuityPage"
                 component={CommnuityPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="FreeBoardPage"
                 component={FreeBoardPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="CommunityScrapPage"
                 component={CommunityScrapPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="HomeScreenScrapPage"
                 component={HomeScreenScrapPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="FreeBoardScrapPage"
                 component={FreeBoardScrapPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="HomePostPage"
                 component={HomePostPage}
@@ -220,34 +199,34 @@ export default function App() {
                 component={FreeBoardPostPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="HomeDetailPage"
                 component={HomeDetailPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="CommuDetailPage"
                 component={CommuDetailPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="FreeBoardDetailPage"
                 component={FreeBoardDetailPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="ChatDetailPage"
                 component={ChatDetailPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="SearchingPage"
                 component={SearchingPage}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="SearchOutput"
+                component={SearchOutput}
                 options={{ headerShown: false }}
               />
 
@@ -256,19 +235,16 @@ export default function App() {
                 component={NotificationPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="NoticePage"
                 component={NoticePage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="SettingPage"
                 component={SettingPage}
                 options={{ headerShown: false }}
               />
-
               <Stack.Screen
                 name="SettingModal"
                 component={SettingModal}
