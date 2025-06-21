@@ -1,4 +1,7 @@
 import { StatusBar } from "expo-status-bar";
+import { Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import {
   StyleSheet,
   Text,
@@ -12,12 +15,38 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-
-import IMAGES from "../../assets";
+import IMAGES from "../../../assets";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
+  const [email, setEmail] = useState(""); // 아이디
+  const [password, setPassword] = useState(""); // 비밀번호
   const [passwordVisible, setPasswordVisible] = useState(false);
+
+  const handleLogin = async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8080/cambooks/member/doLogin",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberId: email, password }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("아이디 또는 비밀번호가 틀렸습니다.");
+      }
+
+      const data = await response.json();
+      await AsyncStorage.setItem("accessToken", data.token);
+      await AsyncStorage.setItem("userId", String(data.id));
+
+      navigation.replace("RouteScreen"); // 로그인 성공 시 RouteScreen 이동
+    } catch (error) {
+      Alert.alert("로그인 실패", error.message);
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -28,12 +57,20 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.loginContainer}>
-          <TextInput style={styles.input} placeholder="아이디" />
+          <TextInput
+            style={styles.input}
+            placeholder="아이디"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+          />
           <View style={styles.passwordInputContainer}>
             <TextInput
               style={styles.inputWithIcon}
               placeholder="비밀번호"
               secureTextEntry={!passwordVisible}
+              value={password}
+              onChangeText={setPassword}
             />
             <TouchableOpacity
               style={styles.eyeIcon}
@@ -46,10 +83,7 @@ export default function LoginScreen() {
               />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.mainbtn}
-            onPress={() => navigation.navigate("RouteScreen")}
-          >
+          <TouchableOpacity style={styles.mainbtn} onPress={handleLogin}>
             <Text style={styles.btnfont}>로그인</Text>
           </TouchableOpacity>
         </View>
@@ -63,14 +97,12 @@ export default function LoginScreen() {
             <Text style={styles.linkfont}>비밀번호 찾기</Text>
           </TouchableOpacity>
           <Text style={styles.linkfont}>|</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("SignUpScreen")}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("AuthenticationScreen")}
+          >
             <Text style={styles.linkfont}>회원가입</Text>
           </TouchableOpacity>
         </View>
-
-        <View style={styles.guestContainer}></View>
-
-        <StatusBar style="auto" />
       </SafeAreaView>
     </ScrollView>
   );

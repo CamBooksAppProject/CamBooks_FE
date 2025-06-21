@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native"; // useNavigation 훅 추가
-import IMAGES from "../../assets";
+import IMAGES from "../../../assets";
 
 export default function GuestScreen() {
   const navigation = useNavigation(); // useNavigation 훅으로 navigation 객체 가져오기
@@ -17,20 +17,13 @@ export default function GuestScreen() {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <SafeAreaView style={styles.container}>
-        <View style={styles.topContainer}>
-        </View>
+        <View style={styles.topContainer}></View>
 
         <View style={styles.userContainer}>
-          <Image
-            source={IMAGES.BACK}
-            style={styles.userImg}
-          />
+          <Image source={IMAGES.BACK} style={styles.userImg} />
           <Text style={styles.userText}>게스트</Text>
           <View style={styles.locContainer}>
-            <Image
-              source={IMAGES.BACK}
-              style={styles.locImg}
-            />
+            <Image source={IMAGES.BACK} style={styles.locImg} />
             <Text style={styles.adsText}>경기도 용인시 기흥구</Text>
           </View>
         </View>
@@ -41,33 +34,20 @@ export default function GuestScreen() {
               style={styles.backButton}
               onPress={() => navigation.navigate("LoginScreen")}
             >
-              <Image
-                source={IMAGES.BACK}
-                style={styles.setImg}
-              />
+              <Image source={IMAGES.BACK} style={styles.setImg} />
               <Text style={styles.menuFont}>로그인</Text>
-              <Image
-                source={IMAGES.BACK}
-                style={styles.nextImg}
-              />
+              <Image source={IMAGES.BACK} style={styles.nextImg} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.navigate("SignUpScreen")}
             >
-              <Image
-                source={IMAGES.BACK}
-                style={styles.setImg}
-              />
+              <Image source={IMAGES.BACK} style={styles.setImg} />
               <Text style={styles.menuFont}>회원가입</Text>
-              <Image
-                source={IMAGES.BACK}
-                style={styles.nextImg}
-              />
+              <Image source={IMAGES.BACK} style={styles.nextImg} />
             </TouchableOpacity>
           </View>
         </View>
-
 
         <StatusBar style="auto" />
       </SafeAreaView>
