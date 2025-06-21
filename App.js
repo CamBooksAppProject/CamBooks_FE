@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import SplashScreen from "./src/Screens/SplashScreen";
+import SplashScreen from "./src/Screens/Pages/SplashScreen";
 import RouteScreen from "./src/Navigation/RouteScreen";
-import LoginScreen from "./src/Screens/LoginScreen";
-import SignUpScreen from "./src/Screens/SignUpScreen";
-import AuthenticationScreen from "./src/Screens/AuthenticationScreen";
-import GuestScreen from "./src/Screens/GuestScreen";
+import LoginScreen from "./src/Screens/Pages/LoginScreen";
+import SignUpScreen from "./src/Screens/Pages/SignUpScreen";
+import AuthenticationScreen from "./src/Screens/Pages/AuthenticationScreen";
+import GuestScreen from "./src/Screens/Pages/GuestScreen";
 
-import HomeScreen from "./src/Screens/HomeScreen";
-import CommunityScreen from "./src/Screens/CommunityScreen";
-import ChatScreen from "./src/Screens/ChatScreen";
-import ScrapScreen from "./src/Screens/ScrapScreen";
-import ProfileScreen from "./src/Screens/ProfileScreen";
+import HomeScreen from "./src/Screens/Pages/HomeScreen";
+import CommunityScreen from "./src/Screens/Pages/CommunityScreen";
+import ChatScreen from "./src/Screens/Pages/ChatScreen";
+import ScrapScreen from "./src/Screens/Pages/ScrapScreen";
+import ProfileScreen from "./src/Screens/Pages/ProfileScreen";
 
 import CommnuityPage from "./src/Screens/Pages/CommunityPage";
 import FreeBoardPage from "./src/Screens/Pages/FreeBoardPage";
@@ -54,206 +56,215 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [isShowSplash, setIsShowSplash] = useState(true);
+  const [initialRoute, setInitialRoute] = useState("LoginScreen");
 
   useEffect(() => {
-    setTimeout(() => {
+    const checkLogin = async () => {
+      const token = await AsyncStorage.getItem("accessToken");
+      if (token) {
+        setInitialRoute("RouteScreen"); // 자동 로그인
+      } else {
+        setInitialRoute("LoginScreen");
+      }
       setIsShowSplash(false);
+    };
+
+    setTimeout(() => {
+      checkLogin();
     }, 1000);
-  });
+  }, []);
+
+  if (isShowSplash) {
+    return <SplashScreen />;
+  }
 
   return (
-    <>
-      {isShowSplash ? (
-        <SplashScreen />
-      ) : (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <NavigationContainer>
-            <Stack.Navigator initialRouteName="LoginScreen">
-              <Stack.Screen
-                name="RouteScreen"
-                component={RouteScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="LoginScreen"
-                component={LoginScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="SignUpScreen"
-                component={SignUpScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="AuthenticationScreen"
-                component={AuthenticationScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="FindId"
-                component={FindId}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="FindPw"
-                component={FindPw}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ChangePw"
-                component={ChangePw}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ChangeAddr"
-                component={ChangeAddr}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="MyInfo"
-                component={MyInfo}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="MyPost"
-                component={MyPost}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="SalesHistory"
-                component={SalesHistory}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="PurchaseHistory"
-                component={PurchaseHistory}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="GuestScreen"
-                component={GuestScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="HomeScreen"
-                component={HomeScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="CommunityScreen"
-                component={CommunityScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ChatScreen"
-                component={ChatScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ScrapScreen"
-                component={ScrapScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ProfileScreen"
-                component={ProfileScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="CommnuityPage"
-                component={CommnuityPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="FreeBoardPage"
-                component={FreeBoardPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="CommunityScrapPage"
-                component={CommunityScrapPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="HomeScreenScrapPage"
-                component={HomeScreenScrapPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="FreeBoardScrapPage"
-                component={FreeBoardScrapPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="HomePostPage"
-                component={HomePostPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="CommuPostPage"
-                component={CommuPostPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="FreeBoardPostPage"
-                component={FreeBoardPostPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="HomeDetailPage"
-                component={HomeDetailPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="CommuDetailPage"
-                component={CommuDetailPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="FreeBoardDetailPage"
-                component={FreeBoardDetailPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ChatDetailPage"
-                component={ChatDetailPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="SearchingPage"
-                component={SearchingPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="SearchOutput"
-                component={SearchOutput}
-                options={{ headerShown: false }}
-              />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName={initialRoute}>
+          <Stack.Screen
+            name="RouteScreen"
+            component={RouteScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="LoginScreen"
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SignUpScreen"
+            component={SignUpScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="AuthenticationScreen"
+            component={AuthenticationScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="FindId"
+            component={FindId}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="FindPw"
+            component={FindPw}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ChangePw"
+            component={ChangePw}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ChangeAddr"
+            component={ChangeAddr}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MyInfo"
+            component={MyInfo}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MyPost"
+            component={MyPost}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SalesHistory"
+            component={SalesHistory}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="PurchaseHistory"
+            component={PurchaseHistory}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="GuestScreen"
+            component={GuestScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="HomeScreen"
+            component={HomeScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CommunityScreen"
+            component={CommunityScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ChatScreen"
+            component={ChatScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ScrapScreen"
+            component={ScrapScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ProfileScreen"
+            component={ProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CommnuityPage"
+            component={CommnuityPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="FreeBoardPage"
+            component={FreeBoardPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CommunityScrapPage"
+            component={CommunityScrapPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="HomeScreenScrapPage"
+            component={HomeScreenScrapPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="FreeBoardScrapPage"
+            component={FreeBoardScrapPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="HomePostPage"
+            component={HomePostPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CommuPostPage"
+            component={CommuPostPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="FreeBoardPostPage"
+            component={FreeBoardPostPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="HomeDetailPage"
+            component={HomeDetailPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CommuDetailPage"
+            component={CommuDetailPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="FreeBoardDetailPage"
+            component={FreeBoardDetailPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ChatDetailPage"
+            component={ChatDetailPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SearchingPage"
+            component={SearchingPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SearchOutput"
+            component={SearchOutput}
+            options={{ headerShown: false }}
+          />
 
-              <Stack.Screen
-                name="NotificationPage"
-                component={NotificationPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="NoticePage"
-                component={NoticePage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="SettingPage"
-                component={SettingPage}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="SettingModal"
-                component={SettingModal}
-                options={{ headerShown: false }}
-              />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </GestureHandlerRootView>
-      )}
-    </>
+          <Stack.Screen
+            name="NotificationPage"
+            component={NotificationPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="NoticePage"
+            component={NoticePage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SettingPage"
+            component={SettingPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SettingModal"
+            component={SettingModal}
+            options={{ headerShown: false }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }

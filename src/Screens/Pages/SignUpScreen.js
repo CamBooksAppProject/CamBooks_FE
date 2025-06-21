@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
   SafeAreaView,
-  ScrollView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +16,7 @@ export default function SignUpScreen() {
   const navigation = useNavigation();
 
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -30,11 +31,14 @@ export default function SignUpScreen() {
   const [passwordValidMessage, setPasswordValidMessage] = useState("");
   const [nameErrorMessage, setNameErrorMessage] = useState("");
 
-  // 비밀번호 유효성 검사 함수
   const validatePassword = (pw) => {
     const regex =
       /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/;
     return regex.test(pw);
+  };
+
+  const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
   const checkIdDuplicate = () => {
@@ -50,7 +54,7 @@ export default function SignUpScreen() {
   const handleConfirmPasswordChange = (text) => {
     setConfirmPassword(text);
     if (!validatePassword(password)) {
-      setPasswordMatchMessage(""); // 조건 안 맞으면 일치 메시지 안 보여줌
+      setPasswordMatchMessage("");
       return;
     }
     if (text === password && text.length > 0) {
@@ -61,7 +65,6 @@ export default function SignUpScreen() {
   };
 
   useEffect(() => {
-    // 비밀번호 유효성 검사 메시지 업데이트
     if (password.length === 0) {
       setPasswordValidMessage("");
     } else if (!validatePassword(password)) {
@@ -72,7 +75,6 @@ export default function SignUpScreen() {
       setPasswordValidMessage("");
     }
 
-    // 비밀번호 일치 메시지 재검사
     if (confirmPassword.length > 0) {
       if (!validatePassword(password)) {
         setPasswordMatchMessage("");
@@ -97,6 +99,7 @@ export default function SignUpScreen() {
   const canProceed =
     name.trim() !== "" &&
     userId.trim() !== "" &&
+    isValidEmail(email) &&
     idChecked &&
     validatePassword(password) &&
     confirmPassword === password;
@@ -127,6 +130,15 @@ export default function SignUpScreen() {
             <Text style={styles.errorText}>{nameErrorMessage}</Text>
           )}
 
+          <TextInput
+            style={styles.input}
+            placeholder="학교 이메일을 입력해주세요."
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+
           <View style={styles.idRow}>
             <TextInput
               style={styles.idInput}
@@ -148,12 +160,10 @@ export default function SignUpScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-
           {idCheckMessage !== "" && (
             <Text style={styles.errorText}>{idCheckMessage}</Text>
           )}
 
-          {/* 비밀번호 입력 */}
           <View style={styles.passwordRow}>
             <TextInput
               style={styles.passwordInput}
@@ -209,16 +219,54 @@ export default function SignUpScreen() {
           )}
         </View>
 
-        {/* 다음 버튼 */}
         <View style={styles.bottomContainer}>
           <TouchableOpacity
             style={[styles.mainButton, !canProceed && styles.disabledButton]}
-            onPress={() => {
-              if (canProceed) navigation.navigate("AuthenticationScreen");
+            onPress={async () => {
+              if (canProceed) {
+                try {
+                  const response = await fetch(
+                    "http://localhost:8080/cambooks/member/create",
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        memberId: userId,
+                        password: password,
+                        universityId: 1,
+                      }),
+                    }
+                  );
+
+                  const responseText = await response.text();
+
+                  if (response.ok) {
+                    Alert.alert(
+                      "회원가입 완료",
+                      `${responseText}님, 환영합니다!`,
+                      [
+                        {
+                          text: "확인",
+                          onPress: () => navigation.navigate("LoginScreen"),
+                        },
+                      ]
+                    );
+                  } else {
+                    Alert.alert("회원가입 실패", `서버 응답: ${responseText}`);
+                  }
+                } catch (error) {
+                  Alert.alert("오류", "회원가입 중 문제가 발생했습니다.");
+                  console.error(error);
+                }
+              }
             }}
             disabled={!canProceed}
           >
-            <Text style={styles.btnfont}>다음</Text>
+            <Text style={styles.btnfont}>회원가입완료</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -228,14 +276,7 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    backgroundColor: "#fff",
-  },
+  safeArea: { flex: 1, backgroundColor: "#fff" },
   container: {
     flex: 1,
     backgroundColor: "#fff",
@@ -243,21 +284,10 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 40,
   },
-  backButton: {
-    marginBottom: 20,
-  },
-  titleContainer: {
-    marginTop: 40,
-    marginBottom: 80,
-  },
-  title: {
-    fontSize: 25,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  inputContainer: {
-    width: "100%",
-  },
+  backButton: { marginBottom: 20 },
+  titleContainer: { marginTop: 40, marginBottom: 80 },
+  title: { fontSize: 25, fontWeight: "bold", color: "#000" },
+  inputContainer: { width: "100%" },
   input: {
     backgroundColor: "#F7F7F7",
     width: "100%",
@@ -285,9 +315,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginLeft: 10,
   },
-  disabledButton: {
-    backgroundColor: "#AAA",
-  },
+  disabledButton: { backgroundColor: "#AAA" },
   btnfont: {
     color: "#fff",
     fontSize: 14,
@@ -308,12 +336,6 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     paddingHorizontal: 8,
-  },
-  notice: {
-    color: "#888",
-    fontSize: 12,
-    marginBottom: 8,
-    marginLeft: 4,
   },
   errorText: {
     color: "red",

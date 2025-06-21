@@ -6,65 +6,84 @@ import {
   TouchableOpacity,
   View,
   SafeAreaView,
-  ScrollView,
   Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
-import { Ionicons } from "@expo/vector-icons"; // Ionicons import
+import { Ionicons } from "@expo/vector-icons";
 
 export default function AuthenticationScreen() {
   const navigation = useNavigation();
-  const [schoolName, setSchoolName] = useState(""); // 학교 이름
   const [email, setEmail] = useState("");
   const [inputCode, setInputCode] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [sentCode, setSentCode] = useState("");
-  const [isCodeConfirmed, setIsCodeConfirmed] = useState(false); // 인증번호 확인 여부
+  const [isCodeConfirmed, setIsCodeConfirmed] = useState(false);
 
-  const correctCode = "123456";
-
-  // 이메일 '@' 포함 및 '.ac.kr' 끝 검사 함수
   const isValidEmail = (email) => {
     const trimmed = email.trim();
     return trimmed.includes("@") && trimmed.endsWith(".ac.kr");
   };
 
-  // 인증번호 전송 함수
-  const handleSendCode = () => {
-    if (!email.includes("@")) {
-      setErrorMessage("이메일에 '@'를 포함해야 합니다.");
-      setSentCode("");
+  const handleSendCode = async () => {
+    if (!isValidEmail(email)) {
+      setErrorMessage(
+        "학교 이메일 형식을 확인해주세요. '.ac.kr'로 끝나야 합니다."
+      );
       return;
     }
-    if (!email.trim().endsWith(".ac.kr")) {
-      setErrorMessage("학교 이메일은 '.ac.kr'로 끝나야 합니다.");
-      setSentCode("");
-      return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/cambooks/email/send-code?email=${encodeURIComponent(
+          email
+        )}`,
+        {
+          method: "POST",
+        }
+      );
+
+      const text = await response.text();
+
+      if (response.ok && text.includes("인증 코드가 전송되었습니다")) {
+        Alert.alert("📩", "인증번호가 이메일로 전송되었습니다.");
+        setErrorMessage("");
+      } else {
+        setErrorMessage(`전송 실패: ${text}`);
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("서버 오류가 발생했습니다. 다시 시도해주세요.");
     }
-    setErrorMessage("");
-    setSentCode(correctCode);
-    setIsCodeConfirmed(false);
-    Alert.alert("", "인증번호가 전송되었습니다.");
   };
 
-  const handleConfirm = () => {
-    if (inputCode !== correctCode) {
-      setErrorMessage("인증번호가 다릅니다.");
-      setIsCodeConfirmed(false);
-      return;
+  const handleConfirm = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/cambooks/email/verify-code?email=${encodeURIComponent(
+          email
+        )}&code=${inputCode}`,
+        {
+          method: "POST",
+        }
+      );
+
+      const text = await response.text();
+      if (response.ok && text === "인증 성공") {
+        setIsCodeConfirmed(true);
+        setErrorMessage("");
+        Alert.alert("이메일 인증 성공", "이메일 인증에 성공했습니다.");
+      } else {
+        setIsCodeConfirmed(false);
+        setErrorMessage("인증번호가 일치하지 않습니다.");
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("서버 오류가 발생했습니다. 다시 시도해주세요.");
     }
-    setErrorMessage("");
-    setIsCodeConfirmed(true);
   };
 
   const handleCompleteSignup = () => {
-    Alert.alert("회원가입 완료", "회원가입이 완료되었습니다.", [
-      {
-        text: "확인",
-        onPress: () => navigation.navigate("LoginScreen"),
-      },
-    ]);
+    navigation.navigate("SignUpScreen");
   };
 
   return (
@@ -83,24 +102,13 @@ export default function AuthenticationScreen() {
         </View>
 
         <View style={styles.InputContainer}>
-          {/* 학교 이름 입력 */}
-          <TextInput
-            style={styles.schoolInput}
-            placeholder="학교 이름을 입력해주세요."
-            value={schoolName}
-            onChangeText={(text) => setSchoolName(text)}
-            autoCapitalize="words"
-          />
-
-          {/* 이메일 입력 */}
           <TextInput
             style={styles.input}
-            placeholder="학교이메일을 입력해주세요."
+            placeholder="학교 이메일을 입력해주세요."
             value={email}
             onChangeText={(text) => {
               setEmail(text);
               setErrorMessage("");
-              setSentCode("");
               setIsCodeConfirmed(false);
             }}
             keyboardType="email-address"
@@ -111,18 +119,10 @@ export default function AuthenticationScreen() {
             <Text style={styles.errorText}>{errorMessage}</Text>
           )}
 
-          {/* 인증번호 전송 버튼 (원래 크기) */}
           <TouchableOpacity style={styles.mainbtn} onPress={handleSendCode}>
             <Text style={styles.btnfont}>인증번호 전송</Text>
           </TouchableOpacity>
 
-          {sentCode !== "" && (
-            <Text style={styles.sentCodeText}>
-              테스트용 인증번호: {sentCode}
-            </Text>
-          )}
-
-          {/* 인증번호 입력 및 확인 버튼 */}
           <View style={styles.ckContainer}>
             <TextInput
               style={styles.ckInput}
@@ -149,18 +149,17 @@ export default function AuthenticationScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 회원가입 완료 버튼: 인증번호가 맞아야 활성화 */}
           <TouchableOpacity
             style={[
               styles.completeBtn,
-              isCodeConfirmed && email && schoolName
+              isCodeConfirmed && email
                 ? { backgroundColor: "#67574D" }
                 : { backgroundColor: "#BEBEBE" },
             ]}
             onPress={handleCompleteSignup}
-            disabled={!isCodeConfirmed || !email || !schoolName}
+            disabled={!isCodeConfirmed || !email}
           >
-            <Text style={styles.btnfont}>회원가입 완료</Text>
+            <Text style={styles.btnfont}>다음</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -172,10 +171,6 @@ export default function AuthenticationScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollContainer: {
-    flexGrow: 1,
     backgroundColor: "#fff",
   },
   container: {
@@ -199,14 +194,6 @@ const styles = StyleSheet.create({
   },
   InputContainer: {
     width: "100%",
-  },
-  schoolInput: {
-    backgroundColor: "#F7F7F7",
-    width: "100%",
-    height: 48,
-    marginBottom: 12,
-    paddingHorizontal: 16,
-    borderRadius: 5,
   },
   input: {
     backgroundColor: "#F7F7F7",
@@ -255,12 +242,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
     marginLeft: 4,
-  },
-  sentCodeText: {
-    marginTop: 5,
-    fontSize: 13,
-    color: "#333",
-    textAlign: "center",
   },
   completeBtn: {
     width: "100%",

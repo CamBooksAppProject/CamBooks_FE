@@ -9,16 +9,37 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const [memberId, setMemberId] = useState(null);
+
+  useEffect(() => {
+    const fetchMemberId = async () => {
+      try {
+        const id = await AsyncStorage.getItem("userId");
+        if (id !== null) {
+          setMemberId(id);
+        } else {
+          setMemberId("로그인 정보 없음");
+        }
+      } catch (e) {
+        console.log("AsyncStorage getItem error:", e);
+        setMemberId("정보를 불러올 수 없음");
+      }
+    };
+
+    fetchMemberId();
+  }, []);
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <SafeAreaView style={styles.container}>
         <View style={styles.userContainer}>
           <MaterialIcons name="account-circle" size={120} color="#ccc" />
-          <Text style={styles.userText}>어서옵쇼</Text>
+          <Text style={styles.userText}>{memberId || "로딩중..."}</Text>
           <View style={styles.locContainer}>
             <MaterialIcons name="location-on" size={18} color="#5E5E5E" />
             <Text style={styles.adsText}>경기도 용인시 기흥구</Text>
