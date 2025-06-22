@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
     },
     bottomView: {
-        height: hp('9%'),
+        height: hp('8%'),
         justifyContent: 'center',
         alignItems: 'center',
         borderTopWidth: 0.5,
@@ -319,10 +319,11 @@ const styles = StyleSheet.create({
     postBtn: {
         justifyContent: 'center',
         alignItems: 'center',
-        width: wp('90%'),
-        height: hp('6.5%'),
+        width: wp('80%'),
+        height: hp('5%'),
         backgroundColor: '#67574D',
         borderRadius: 15,
+        marginBottom: hp('1%'),
     },
     cBtn: {
         flexDirection: 'row',

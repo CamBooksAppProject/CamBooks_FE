@@ -98,21 +98,15 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
     },
     topView: {
-        backgroundColor: 'white',
-        width: '100%',
         height: hp('10%'),
         justifyContent: 'center',
     },
     middleView: {
+        flex: 1,
         backgroundColor: 'white',
-        width: '100%',
-        height: hp('73%'),
     },
     bottomView: {
-        flexDirection: 'row',
-        backgroundColor: 'white',
-        width: '100%',
-        height: hp('9%'),
+        height: hp('8%'),
         justifyContent: 'center',
         alignItems: 'center',
         borderTopWidth: 0.5,
@@ -140,10 +134,11 @@ const styles = StyleSheet.create({
     postBtn: {
         justifyContent: 'center',
         alignItems: 'center',
-        width: wp('90%'),
-        height: hp('6.5%'),
+        width: wp('80%'),
+        height: hp('5%'),
         backgroundColor: '#67574D',
         borderRadius: 15,
+        marginBottom: hp('1%'),
     },
     itemBox: {
         borderBottomWidth: 0.5,

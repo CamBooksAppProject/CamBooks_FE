@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import IMAGES from "../../../assets";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
 export default function HomeDetailPage({ navigation, route }) {
     const { postId } = route.params; // 네비게이션에서 전달된 게시글 ID
     const [post, setPost] = useState(null);
@@ -98,7 +98,7 @@ export default function HomeDetailPage({ navigation, route }) {
                                     ) : (
                                         <View
                                             key={index}
-                                            style={[styles.photo, { backgroundColor: "orange" }]}
+                                            style={[styles.photo, { backgroundColor: "gray" }]}
                                         />
                                     )
                                 )}
@@ -166,7 +166,7 @@ export default function HomeDetailPage({ navigation, route }) {
                         style={{ width: 20, height: 20 }}
                     />
                 </TouchableOpacity>
-                <View style={{ marginLeft: 10 }}>
+                <View style={{ marginLeft: 10, marginBottom: hp('1%'), }}>
                     <Text style={styles.priceFont}>
                         {typeof post.price === "number"
                             ? `${post.price.toLocaleString()}원`
@@ -197,65 +197,108 @@ export default function HomeDetailPage({ navigation, route }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "white" },
+
     topView: {
-        backgroundColor: "white",
-        width: "100%",
-        height: "10%",
-        justifyContent: "center",
-        borderBottomWidth: 0.5,
-        borderBottomColor: "gray",
+        height: hp('10%'),
+        justifyContent: 'center',
     },
-    middleView: { backgroundColor: "white", width: "100%", height: "73%" },
-    nameFont: { fontSize: 13, fontWeight: "bold", marginLeft: 5 },
-    titleFont: { fontSize: 17, fontWeight: "bold", marginBottom: 10 },
-    contentsFont: { fontSize: 15, lineHeight: 23 },
-    collegeFont: { fontSize: 12, color: "gray", marginLeft: 5 },
+    middleView: {
+        flex: 1,
+        backgroundColor: 'white',
+    },
+    photoView: {
+        flexDirection: "row",
+        width: "100%",
+        height: wp("55%"),
+        borderBottomColor: "gray",
+        borderBottomWidth: 0.5,
+    },
+
+    photo: {
+        width: wp("55%"),
+        height: wp("55%"),
+        marginRight: wp("1%"),
+        backgroundColor: "#f0f0f0",
+    },
+    nameFont: {
+        fontSize: wp("3.3%"),
+        fontWeight: "bold",
+        marginLeft: wp("1.5%"),
+    },
+    collegeFont: {
+        fontSize: wp("3%"),
+        color: "gray",
+        marginLeft: wp("1.5%"),
+    },
+    titleFont: {
+        fontSize: wp("5%"),
+        fontWeight: "bold",
+        marginBottom: hp("1.5%"),
+        color: "black",
+    },
+
+    contentsFont: {
+        fontSize: wp("4%"),
+        lineHeight: hp("3%"),
+        color: "black",
+    },
+
     iconFont: {
-        fontSize: 15,
+        fontSize: wp("3.2%"),
         fontWeight: "bold",
         color: "gray",
-        marginLeft: 5,
+        marginLeft: wp("1.5%"),
     },
+
+    priceFont: {
+        fontSize: wp("5%"),
+        fontWeight: "bold",
+        color: "#111",
+    },
+
+    lowPriceFont: {
+        fontSize: wp("3.2%"),
+        fontWeight: "bold",
+        color: "#888",
+    },
+
     bottomView: {
         flexDirection: "row",
         backgroundColor: "white",
         width: "100%",
-        height: "9%",
+        height: hp('8%'),
         alignItems: "center",
         justifyContent: "space-evenly",
         borderTopWidth: 0.5,
         borderTopColor: "gray",
     },
-    photoView: {
-        flexDirection: "row",
-        width: "100%",
-        height: 200,
-        borderBottomColor: "gray",
-        borderBottomWidth: 0.5,
-    },
-    photo: { width: 200, height: 200, marginRight: 5 },
+
     heartBtnView: {
         backgroundColor: "white",
-        width: 35,
-        height: 35,
+        width: wp("8%"),
+        height: wp("8%"),
         justifyContent: "center",
         alignItems: "center",
-        marginLeft: 10,
         borderColor: "gray",
         borderWidth: 0.2,
-        borderRadius: 12,
+        borderRadius: wp("3%"),
+        marginBottom: hp('1%'),
     },
-    priceFont: { fontSize: 17, fontWeight: "bold" },
-    lowPriceFont: { fontSize: 12, fontWeight: "bold" },
     chatBtnView: {
         backgroundColor: "#67574D",
-        width: 135,
-        height: 45,
+        width: wp("30%"),
+        height: hp("5%"),
         justifyContent: "space-evenly",
         alignItems: "center",
-        marginLeft: 15,
-        borderRadius: 12,
+        marginLeft: wp("3.5%"),
+        borderRadius: wp("3%"),
         flexDirection: "row",
+        marginBottom: hp('1%'),
     },
-    chatFont: { color: "white", fontSize: 20, fontWeight: "bold" },
+
+    chatFont: {
+        color: "white",
+        fontSize: wp("4.8%"),
+        fontWeight: "bold",
+    },
 });
