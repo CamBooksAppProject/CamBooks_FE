@@ -13,47 +13,68 @@ import {
 } from "react-native-responsive-screen";
 import IMAGES from "../../../assets";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      college: "서울대",
-      title: "전공책 5개 팝니다~",
-      price: "30,000원",
-      likes: 30,
-      views: 50,
-    },
-  ]);
+  const [items, setItems] = useState([]);
 
   useEffect(() => {
-    // fetchData();
+    fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      const response = await fetch("https://your.api.endpoint.com/posts");
+      const token = await AsyncStorage.getItem('accessToken');
+
+      if (!token) throw new Error("로그인이 필요합니다.");
+
+      const response = await fetch("http://localhost:8080/cambooks/used-trade", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : data.posts || []);
     } catch (error) {
       console.error("API 통신 오류:", error);
     }
   };
 
+
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.listView}
-      onPress={() => navigation.navigate("HomeDetailPage")}
+      onPress={() => navigation.navigate("HomeDetailPage", { postId: item.id })}
     >
       <View style={{ flexDirection: "row" }}>
-        <View style={styles.photo} />
+        <View style={styles.photo}>
+          {item.imageUrl ? (
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={{ width: "100%", height: "100%", borderRadius: wp(1.5) }}
+              resizeMode="cover"
+            />
+          ) : null}
+        </View>
         <View style={{ flexDirection: "column" }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={styles.collegeFont}>{item.college}</Text>
             <Text style={styles.title}>{item.title}</Text>
           </View>
-          <Text style={styles.priceFont}>{item.price}</Text>
+          <Text style={styles.priceFont}>
+            {typeof item.price === "number"
+              ? `${item.price.toLocaleString()}원`
+              : item.price}
+          </Text>
           <View style={styles.iconRow}>
             <Image
               source={IMAGES.REDHEART}
@@ -117,6 +138,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: wp(1.5),
     backgroundColor: "orange",
+    overflow: "hidden",
   },
   additBtn: {
     alignItems: "center",

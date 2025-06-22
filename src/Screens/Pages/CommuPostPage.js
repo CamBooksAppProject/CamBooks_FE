@@ -1,10 +1,20 @@
-import { StyleSheet, View, TouchableOpacity, Image, TextInput, Text, ScrollView, SafeAreaView, Modal, Alert } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import {
+    StyleSheet,
+    View,
+    TouchableOpacity,
+    Image,
+    TextInput,
+    Text,
+    ScrollView,
+    SafeAreaView,
+    Modal,
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import IMAGES from '../../../assets';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
 export default function CommuPostPage({ navigation }) {
@@ -15,87 +25,51 @@ export default function CommuPostPage({ navigation }) {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [isStartDate, setIsStartDate] = useState(true);
     const [photos, setPhotos] = useState([]);
-    const [items, setItems] = useState([]);
 
-    useEffect(() => {
-        // fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            const response = await fetch('https://your.api.endpoint.com/posts');
-            const data = await response.json();
-            setItems(data);
-        } catch (error) {
-            console.error('API 통신 오류:', error);
-        }
-    };
+    const MAX_PHOTOS = 8;
 
     const formatDate = (date) => {
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+        const month = `${date.getMonth() + 1}`.padStart(2, '0');
+        const day = `${date.getDate()}`.padStart(2, '0');
         return `${year}/${month}/${day}`;
     };
 
     const onDateChange = (event, selectedDate) => {
         const currentDate = selectedDate || (isStartDate ? startDate : endDate);
-        if (isStartDate) {
-            setStartDate(currentDate);
-        } else {
-            setEndDate(currentDate);
-        }
+        if (isStartDate) setStartDate(currentDate);
+        else setEndDate(currentDate);
         setShowDatePicker(false);
     };
 
-    const handleCameraPress = () => {
-        Alert.alert(
-            "사진 선택",
-            "사진을 선택할 방법을 선택하세요",
-            [
-                {
-                    text: "카메라",
-                    onPress: () => launchCamera({
-                        mediaType: 'photo',
-                        maxWidth: 300,
-                        maxHeight: 300,
-                        quality: 1,
-                    }, (response) => {
-                        if (response.didCancel) {
-                            console.log('User cancelled image picker');
-                        } else if (response.error) {
-                            console.log('ImagePicker Error: ', response.error);
-                        } else {
-                            const source = { uri: response.assets[0].uri };
-                            setPhotos([...photos, source]);
-                        }
-                    }),
-                },
-                {
-                    text: "갤러리",
-                    onPress: () => launchImageLibrary({
-                        mediaType: 'photo',
-                        maxWidth: 300,
-                        maxHeight: 300,
-                        quality: 1,
-                    }, (response) => {
-                        if (response.didCancel) {
-                            console.log('User cancelled image picker');
-                        } else if (response.error) {
-                            console.log('ImagePicker Error: ', response.error);
-                        } else {
-                            const source = { uri: response.assets[0].uri };
-                            setPhotos([...photos, source]);
-                        }
-                    }),
-                },
-                {
-                    text: "취소",
-                    style: "cancel",
-                },
-            ],
-            { cancelable: true }
-        );
+    const handleSelectPhoto = async () => {
+        if (photos.length >= MAX_PHOTOS) return;
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            const selectedUri = result.assets[0].uri;
+            setPhotos(prev => [...prev, { uri: selectedUri }].slice(0, MAX_PHOTOS));
+        }
+    };
+
+    const handleTakePhoto = async () => {
+        if (photos.length >= MAX_PHOTOS) return;
+
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            const photoUri = result.assets[0].uri;
+            setPhotos(prev => [...prev, { uri: photoUri }].slice(0, MAX_PHOTOS));
+        }
     };
 
     return (
@@ -114,16 +88,20 @@ export default function CommuPostPage({ navigation }) {
 
             <View style={styles.middleView}>
                 <ScrollView>
-                    {/* 이미지 선택 기능 */}
-                    <View style={styles.photoContainer}>
-                        <View style={styles.photoEdit}>
-                            <TouchableOpacity onPress={handleCameraPress}>
-                                <FontAwesome name="camera" size={wp(5)} color="black" />
-                                <Text style={styles.photoText}>0/8</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={styles.photoHint}>첫 번째 사진이 메인으로 설정됩니다.</Text>
+
+                    {/* 사진 추가 버튼 */}
+                    <View style={[styles.photoContainer, { marginBottom: hp(2) }]}>
+                        <TouchableOpacity style={styles.photoEdit} onPress={handleTakePhoto}>
+                            <FontAwesome name="camera" size={wp(5)} color="black" />
+                            <Text style={styles.photoText}>카메라</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.photoEdit, { marginLeft: wp(3) }]} onPress={handleSelectPhoto}>
+                            <FontAwesome name="image" size={wp(5)} color="black" />
+                            <Text style={styles.photoText}>{photos.length}/{MAX_PHOTOS}</Text>
+                        </TouchableOpacity>
                     </View>
+
+                    <Text style={styles.photoHint}>첫 번째 사진이 메인으로 설정됩니다.</Text>
 
                     {/* 선택된 사진 미리보기 */}
                     <View style={styles.photoPreview}>
@@ -154,7 +132,7 @@ export default function CommuPostPage({ navigation }) {
                         />
                     </View>
 
-                    {/* 모집 기간 설정 (시작일, 종료일) */}
+                    {/* 모집 시작일 */}
                     <View style={styles.dateEdit}>
                         <TouchableOpacity onPress={() => { setIsStartDate(true); setShowDatePicker(true); }} style={styles.touchable}>
                             <Text style={styles.dateText}>
@@ -163,6 +141,7 @@ export default function CommuPostPage({ navigation }) {
                         </TouchableOpacity>
                     </View>
 
+                    {/* 모집 종료일 */}
                     <View style={styles.dateEdit}>
                         <TouchableOpacity onPress={() => { setIsStartDate(false); setShowDatePicker(true); }} style={styles.touchable}>
                             <Text style={styles.dateText}>
@@ -171,6 +150,7 @@ export default function CommuPostPage({ navigation }) {
                         </TouchableOpacity>
                     </View>
 
+                    {/* 날짜 선택 모달 */}
                     <Modal visible={showDatePicker} transparent={true} animationType="slide">
                         <View style={styles.modalContainer}>
                             <View style={styles.pickerContainer}>
@@ -199,6 +179,7 @@ export default function CommuPostPage({ navigation }) {
                         </TouchableOpacity>
                     </View>
 
+                    {/* 인원 선택 모달 */}
                     <Modal visible={showPeoplePicker} transparent={true} animationType="slide">
                         <View style={styles.modalContainer}>
                             <View style={styles.pickerContainer}>
@@ -220,6 +201,7 @@ export default function CommuPostPage({ navigation }) {
                             </View>
                         </View>
                     </Modal>
+
                 </ScrollView>
             </View>
 
@@ -276,16 +258,19 @@ const styles = StyleSheet.create({
     },
     photoText: {
         fontSize: wp(3),
+        marginTop: 4,
     },
     photoHint: {
         fontSize: wp(3),
         color: 'gray',
-        marginLeft: wp(2),
+        marginLeft: wp(5),
+        marginBottom: hp(2),
     },
     photoPreview: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         marginBottom: hp(3),
+        marginHorizontal: wp(5),
     },
     photoImage: {
         width: wp(20),
