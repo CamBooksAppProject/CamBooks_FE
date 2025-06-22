@@ -49,7 +49,6 @@ export default function HomeScreen() {
   };
 
 
-
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.listView}
@@ -65,10 +64,12 @@ export default function HomeScreen() {
             />
           ) : null}
         </View>
-        <View style={{ flexDirection: "column" }}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={styles.textWrapper}>
+          <View style={styles.titleRow}>
             <Text style={styles.collegeFont}>{item.college}</Text>
-            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+              {item.title}
+            </Text>
           </View>
           <Text style={styles.priceFont}>
             {typeof item.price === "number"
@@ -76,23 +77,16 @@ export default function HomeScreen() {
               : item.price}
           </Text>
           <View style={styles.iconRow}>
-            <Image
-              source={IMAGES.REDHEART}
-              style={styles.iconImage}
-              resizeMode="contain"
-            />
+            <Image source={IMAGES.REDHEART} style={styles.iconImage} resizeMode="contain" />
             <Text style={styles.iconFont}>{item.likes}</Text>
-            <Image
-              source={IMAGES.EYE}
-              style={styles.iconImage}
-              resizeMode="contain"
-            />
+            <Image source={IMAGES.EYE} style={styles.iconImage} resizeMode="contain" />
             <Text style={styles.iconFont}>{item.views}</Text>
           </View>
         </View>
       </View>
     </TouchableOpacity>
   );
+
 
   return (
     <View style={styles.container}>
@@ -114,7 +108,6 @@ export default function HomeScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -137,8 +130,53 @@ const styles = StyleSheet.create({
     borderColor: "#E9E9E9",
     borderWidth: 1,
     borderRadius: wp(1.5),
-    backgroundColor: "orange",
+    backgroundColor: "gray",
     overflow: "hidden",
+  },
+  textWrapper: {
+    flex: 1,
+    marginLeft: wp(3),
+    justifyContent: "center",
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: hp(0.3),
+  },
+  collegeFont: {
+    fontSize: wp(3),
+    fontWeight: "bold",
+    color: "gray",
+    marginRight: wp(1.5),
+  },
+  title: {
+    fontSize: wp(3.8),
+    fontWeight: "600",
+    maxWidth: wp(50),
+  },
+  priceFont: {
+    fontSize: wp(4),
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: hp(0.3),
+    marginLeft: hp(1.5),
+  },
+  iconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: hp(0.5),
+    marginLeft: hp(1.5),
+  },
+  iconFont: {
+    fontSize: wp(2.8),
+    fontWeight: "bold",
+    color: "gray",
+    marginLeft: wp(1.5),
+    marginRight: wp(1.5),
+  },
+  iconImage: {
+    height: wp(4),
+    width: wp(4),
   },
   additBtn: {
     alignItems: "center",
@@ -157,38 +195,5 @@ const styles = StyleSheet.create({
   plusIcon: {
     height: wp(6),
     width: wp(6),
-  },
-  collegeFont: {
-    fontSize: wp(3),
-    fontWeight: "bold",
-    color: "gray",
-    marginLeft: wp(3),
-  },
-  title: {
-    fontSize: wp(3.5),
-    fontWeight: "bold",
-    marginLeft: wp(2),
-  },
-  priceFont: {
-    fontSize: wp(3.3),
-    marginLeft: wp(3),
-    marginTop: hp(0.5),
-  },
-  iconRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: wp(3),
-    marginTop: hp(0.8),
-  },
-  iconFont: {
-    fontSize: wp(2.8),
-    fontWeight: "bold",
-    color: "gray",
-    marginLeft: wp(1.5),
-    marginRight: wp(1.5),
-  },
-  iconImage: {
-    height: wp(4),
-    width: wp(4),
   },
 });
