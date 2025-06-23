@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [items, setItems] = useState([]);
+  const BASE_URL = 'http://localhost:8080';
 
   useEffect(() => {
     fetchData();
@@ -42,12 +43,14 @@ export default function HomeScreen() {
       }
 
       const data = await response.json();
+
+      console.log('items:', items);
+
       setItems(Array.isArray(data) ? data : data.posts || []);
     } catch (error) {
       console.error("API 통신 오류:", error);
     }
   };
-
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
@@ -56,9 +59,9 @@ export default function HomeScreen() {
     >
       <View style={{ flexDirection: "row" }}>
         <View style={styles.photo}>
-          {item.imageUrl ? (
+          {item.thumbnailUrl ? (
             <Image
-              source={{ uri: item.imageUrl }}
+              source={{ uri: `${BASE_URL}${item.thumbnailUrl}` }}
               style={{ width: "100%", height: "100%", borderRadius: wp(1.5) }}
               resizeMode="cover"
             />
@@ -66,7 +69,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.textWrapper}>
           <View style={styles.titleRow}>
-            <Text style={styles.collegeFont}>{item.college}</Text>
+            <Text style={styles.collegeFont}>{item.university}</Text>
             <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
               {item.title}
             </Text>
@@ -78,14 +81,15 @@ export default function HomeScreen() {
           </Text>
           <View style={styles.iconRow}>
             <Image source={IMAGES.REDHEART} style={styles.iconImage} resizeMode="contain" />
-            <Text style={styles.iconFont}>{item.likes}</Text>
+            <Text style={styles.iconFont}>{item.postLikeCount}</Text>
             <Image source={IMAGES.EYE} style={styles.iconImage} resizeMode="contain" />
-            <Text style={styles.iconFont}>{item.views}</Text>
+            <Text style={styles.iconFont}>{item.viewCount}</Text>
           </View>
         </View>
       </View>
     </TouchableOpacity>
   );
+
 
 
   return (
