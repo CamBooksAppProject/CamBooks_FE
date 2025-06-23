@@ -104,7 +104,17 @@ export default function HomePostPage({ navigation }) {
             const data = await response.json();
             console.log('응답 데이터:', data);
 
-            navigation.navigate('HomeScreen');
+            navigation.reset({
+                index: 0,
+                routes: [
+                    {
+                        name: 'RouteScreen',
+                        state: {
+                            routes: [{ name: 'HomeScreen' }],
+                        },
+                    },
+                ],
+            });
 
         } catch (error) {
             console.error('API 호출 실패:', error.message);
