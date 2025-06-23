@@ -33,6 +33,7 @@ export default function HomePostPage({ navigation }) {
             delivery: option === 'delivery',
         });
     };
+
     const handleSelectPhoto = async () => {
         if (images.length >= 4) return;
 
@@ -74,7 +75,7 @@ export default function HomePostPage({ navigation }) {
 
         const tradeMethod = selectedOptions.direct ? 'DIRECT' : selectedOptions.delivery ? 'DELIVERY' : '';
         if (!title.trim() || !content.trim() || !tradeMethod || isNaN(Number(price))) {
-            throw new Error('입력값을 확인하세요.');
+            throw new Error('입력값을 확인하세요.!!');
         }
 
         const dto = {
