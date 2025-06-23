@@ -14,6 +14,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 export default function HomePostPage({ navigation }) {
     const [selectedOptions, setSelectedOptions] = useState({
@@ -69,56 +70,63 @@ export default function HomePostPage({ navigation }) {
 
     const postTrade = async () => {
         const url = 'http://localhost:8080/cambooks/used-trade/1';
+        const token = await AsyncStorage.getItem('accessToken');
+        if (!token) throw new Error('로그인이 필요합니다.');
 
-        try {
-            const token = await AsyncStorage.getItem('accessToken');
-
-            if (!token) {
-                throw new Error('로그인이 필요합니다.');
-            }
-
-            const tradeMethod = selectedOptions.direct ? 'DIRECT' :
-                selectedOptions.delivery ? 'DELIVERY' : '';
-
-            const body = {
-                title,
-                content,
-                price: Number(price),
-                tradeMethod,
-            };
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Accept': '*/*',
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(body),
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('응답 데이터:', data);
-
-            navigation.reset({
-                index: 0,
-                routes: [
-                    {
-                        name: 'RouteScreen',
-                        state: {
-                            routes: [{ name: 'HomeScreen' }],
-                        },
-                    },
-                ],
-            });
-
-        } catch (error) {
-            console.error('API 호출 실패:', error.message);
+        const tradeMethod = selectedOptions.direct ? 'DIRECT' : selectedOptions.delivery ? 'DELIVERY' : '';
+        if (!title.trim() || !content.trim() || !tradeMethod || isNaN(Number(price))) {
+            throw new Error('입력값을 확인하세요.');
         }
+
+        const dto = {
+            title: title.trim(),
+            content: content.trim(),
+            price: Number(price),
+            tradeMethod,
+        };
+
+        const dtoFileUri = FileSystem.cacheDirectory + 'dto.json';
+        await FileSystem.writeAsStringAsync(dtoFileUri, JSON.stringify(dto), { encoding: FileSystem.EncodingType.UTF8 });
+
+        const formData = new FormData();
+
+        formData.append('dto', {
+            uri: dtoFileUri,
+            name: 'dto.json',
+            type: 'application/json',
+        });
+
+        images.forEach((img, i) => {
+            const uri = img.uri;
+            const filename = uri.split('/').pop() || `photo_${i}.jpg`;
+            let type = 'image/jpeg';
+            const ext = filename.split('.').pop().toLowerCase();
+            if (ext === 'png') type = 'image/png';
+
+            formData.append('images', { uri, name: filename, type });
+        });
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            console.error('서버 응답:', text);
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('응답 데이터:', data);
+
+        navigation.reset({
+            index: 0,
+            routes: [{ name: 'RouteScreen', state: { routes: [{ name: 'HomeScreen' }] } }],
+        });
     };
 
     return (

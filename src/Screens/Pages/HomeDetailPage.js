@@ -1,3 +1,4 @@
+// 생략된 import 유지
 import React, { useState, useEffect } from "react";
 import {
     StyleSheet,
@@ -11,10 +12,12 @@ import {
 import IMAGES from "../../../assets";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
+
 export default function HomeDetailPage({ navigation, route }) {
-    const { postId } = route.params; // 네비게이션에서 전달된 게시글 ID
+    const { postId } = route.params;
     const [post, setPost] = useState(null);
     const [isHeartFilled, setIsHeartFilled] = useState(false);
+    const BASE_URL = 'http://192.168.0.19:8080';
 
     useEffect(() => {
         fetchPostDetail();
@@ -23,25 +26,20 @@ export default function HomeDetailPage({ navigation, route }) {
     const fetchPostDetail = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
 
-            if (!token) {
-                throw new Error("로그인이 필요합니다.");
-            }
-
-            const response = await fetch(
-                `http://localhost:8080/cambooks/used-trade/${postId}`,
-                {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
+            const response = await fetch(`${BASE_URL}/cambooks/used-trade/${postId}`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
 
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
+            console.log("post data:", data);
             setPost(data);
             setIsHeartFilled(data.isLiked || false);
         } catch (error) {
@@ -49,11 +47,8 @@ export default function HomeDetailPage({ navigation, route }) {
         }
     };
 
-
-
     const handleHeartPress = () => {
         setIsHeartFilled(!isHeartFilled);
-        // TODO: 좋아요 API 호출 등 추가 가능
     };
 
     if (!post) {
@@ -85,23 +80,17 @@ export default function HomeDetailPage({ navigation, route }) {
                 <ScrollView>
                     <View style={styles.photoView}>
                         <ScrollView horizontal>
-                            {(post.images && post.images.length > 0
-                                ? post.images
-                                : [""]).map((uri, index) =>
-                                    uri ? (
-                                        <Image
-                                            key={index}
-                                            source={{ uri }}
-                                            style={styles.photo}
-                                            resizeMode="cover"
-                                        />
-                                    ) : (
-                                        <View
-                                            key={index}
-                                            style={[styles.photo, { backgroundColor: "gray" }]}
-                                        />
-                                    )
-                                )}
+                            {(post.imageUrls?.length > 0 ? post.imageUrls : []).map((uri, index) => {
+                                const fullUri = uri.startsWith("http") ? uri : `${BASE_URL}${uri}`;
+                                return (
+                                    <Image
+                                        key={index}
+                                        source={{ uri: fullUri }}
+                                        style={styles.photo}
+                                        resizeMode="cover"
+                                    />
+                                );
+                            })}
                         </ScrollView>
                     </View>
 
@@ -118,8 +107,8 @@ export default function HomeDetailPage({ navigation, route }) {
                                 resizeMode="contain"
                                 style={{ height: 15, width: 15 }}
                             />
-                            <Text style={styles.nameFont}>{post.authorName}</Text>
-                            <Text style={styles.collegeFont}>{post.college}</Text>
+                            <Text style={styles.nameFont}>{post.writerName}</Text>
+                            <Text style={styles.collegeFont}>{post.university}</Text>
                             <TouchableOpacity>
                                 <Image
                                     source={IMAGES.THREEDOT}
@@ -130,6 +119,19 @@ export default function HomeDetailPage({ navigation, route }) {
                         </View>
 
                         <Text style={styles.titleFont}>{post.title}</Text>
+
+                        <Text style={styles.tradeMethodFont}>
+                            {Array.isArray(post.tradeMethod)
+                                ? post.tradeMethod
+                                    .map((method) => (method === "DIRECT" ? "직거래" : method === "DELIVERY" ? "택배거래" : "기타"))
+                                    .join(" / ")
+                                : post.tradeMethod === "DIRECT"
+                                    ? "직거래"
+                                    : post.tradeMethod === "DELIVERY"
+                                        ? "택배거래"
+                                        : "기타"}
+                        </Text>
+
                         <Text style={styles.contentsFont}>{post.content}</Text>
 
                         <View
@@ -146,13 +148,13 @@ export default function HomeDetailPage({ navigation, route }) {
                                 tintColor="lightgray"
                                 style={{ height: 15, width: 15 }}
                             />
-                            <Text style={styles.iconFont}>{post.likes}</Text>
+                            <Text style={styles.iconFont}>{post.postLikeCount}</Text>
                             <Image
                                 source={IMAGES.EYE}
                                 resizeMode="contain"
                                 style={{ height: 17, width: 17, marginLeft: 15 }}
                             />
-                            <Text style={styles.iconFont}>{post.views}</Text>
+                            <Text style={styles.iconFont}>{post.viewCount}</Text>
                         </View>
                     </View>
                 </ScrollView>
@@ -166,20 +168,12 @@ export default function HomeDetailPage({ navigation, route }) {
                         style={{ width: 20, height: 20 }}
                     />
                 </TouchableOpacity>
-                <View style={{ marginLeft: 10, marginBottom: hp('1%'), }}>
+                <View style={{ marginLeft: 10, marginBottom: hp('1%') }}>
                     <Text style={styles.priceFont}>
                         {typeof post.price === "number"
                             ? `${post.price.toLocaleString()}원`
                             : post.price}
                     </Text>
-                    {post.lowestPrice && (
-                        <View style={{ flexDirection: "row", marginTop: 5 }}>
-                            <Text style={styles.lowPriceFont}>네이버쇼핑 최저가: </Text>
-                            <Text style={styles.lowPriceFont}>
-                                {post.lowestPrice.toLocaleString()}원
-                            </Text>
-                        </View>
-                    )}
                 </View>
                 <TouchableOpacity style={styles.chatBtnView}>
                     <Image
@@ -197,7 +191,6 @@ export default function HomeDetailPage({ navigation, route }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "white" },
-
     topView: {
         height: hp('10%'),
         justifyContent: 'center',
@@ -213,7 +206,6 @@ const styles = StyleSheet.create({
         borderBottomColor: "gray",
         borderBottomWidth: 0.5,
     },
-
     photo: {
         width: wp("55%"),
         height: wp("55%"),
@@ -236,32 +228,33 @@ const styles = StyleSheet.create({
         marginBottom: hp("1.5%"),
         color: "black",
     },
-
+    tradeMethodFont: {
+        fontSize: wp("3.5%"),
+        fontWeight: "500",
+        color: "#67574D",
+        marginBottom: hp("1%"),
+    },
     contentsFont: {
         fontSize: wp("4%"),
         lineHeight: hp("3%"),
         color: "black",
     },
-
     iconFont: {
         fontSize: wp("3.2%"),
         fontWeight: "bold",
         color: "gray",
         marginLeft: wp("1.5%"),
     },
-
     priceFont: {
         fontSize: wp("5%"),
         fontWeight: "bold",
         color: "#111",
     },
-
     lowPriceFont: {
         fontSize: wp("3.2%"),
         fontWeight: "bold",
         color: "#888",
     },
-
     bottomView: {
         flexDirection: "row",
         backgroundColor: "white",
@@ -272,7 +265,6 @@ const styles = StyleSheet.create({
         borderTopWidth: 0.5,
         borderTopColor: "gray",
     },
-
     heartBtnView: {
         backgroundColor: "white",
         width: wp("8%"),
@@ -295,7 +287,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         marginBottom: hp('1%'),
     },
-
     chatFont: {
         color: "white",
         fontSize: wp("4.8%"),
