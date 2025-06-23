@@ -28,10 +28,10 @@ export default function HomePostPage({ navigation }) {
     const [price, setPrice] = useState('');
 
     const toggleOption = (option) => {
-        setSelectedOptions(prev => ({
-            ...prev,
-            [option]: !prev[option],
-        }));
+        setSelectedOptions({
+            direct: option === 'direct',
+            delivery: option === 'delivery',
+        });
     };
 
     const handleSelectPhoto = async () => {
@@ -75,7 +75,7 @@ export default function HomePostPage({ navigation }) {
 
         const tradeMethod = selectedOptions.direct ? 'DIRECT' : selectedOptions.delivery ? 'DELIVERY' : '';
         if (!title.trim() || !content.trim() || !tradeMethod || isNaN(Number(price))) {
-            throw new Error('입력값을 확인하세요.');
+            throw new Error('입력값을 확인하세요.!!');
         }
 
         const dto = {
