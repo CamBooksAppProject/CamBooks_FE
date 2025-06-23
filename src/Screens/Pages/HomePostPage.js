@@ -28,12 +28,11 @@ export default function HomePostPage({ navigation }) {
     const [price, setPrice] = useState('');
 
     const toggleOption = (option) => {
-        setSelectedOptions(prev => ({
-            ...prev,
-            [option]: !prev[option],
-        }));
+        setSelectedOptions({
+            direct: option === 'direct',
+            delivery: option === 'delivery',
+        });
     };
-
     const handleSelectPhoto = async () => {
         if (images.length >= 4) return;
 
