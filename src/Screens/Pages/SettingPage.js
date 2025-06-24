@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
   StyleSheet,
@@ -9,13 +10,13 @@ import {
   ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-
 import { Switch } from "react-native-gesture-handler";
-import { useState } from "react";
-import SettingModal from "./SettingModal.js";
 
+import SettingModal from "./SettingModal.js";
 import IMAGES from "../../../assets";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../../api/axiosInstance";
 
 export default function SettingPage() {
   const navigation = useNavigation();
@@ -23,13 +24,43 @@ export default function SettingPage() {
   const [isChatEnabled, setIsChatEnabled] = useState(false);
   const [isCommunityEnabled, setIsCommunityEnabled] = useState(false);
 
-  const [nickname, setNickname] = useState("어서옵쇼");
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [nickname, setNickname] = useState("사용자");
   const [profileImage, setProfileImage] = useState(IMAGES.LOGO);
+
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // 닉네임 불러오기
+  const fetchNickname = async () => {
+    try {
+      const res = await api.get("/member/nickname");
+      setNickname(res.data || "사용자");
+    } catch (error) {
+      console.error("닉네임 불러오기 실패:", error);
+      setNickname("사용자");
+    }
+  };
+
+  useEffect(() => {
+    fetchNickname();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem("accessToken"); // 저장한 토큰 삭제
+      await AsyncStorage.removeItem("refreshToken"); // 있다면 이거도
+
+      // 네비게이션 초기화하면서 로그인 스크린으로 이동
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "LoginScreen" }],
+      });
+    } catch (error) {
+      console.error("로그아웃 실패:", error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 헤더 고정 */}
       <View style={styles.topContainer}>
         <View style={styles.topBtnContainer}>
           <TouchableOpacity
@@ -45,7 +76,6 @@ export default function SettingPage() {
         <View style={{ width: "15%" }}></View>
       </View>
 
-      {/* 프로필 및 설정 내용 스크롤 */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.myContainer}>
           <View style={styles.myImg}>
@@ -55,7 +85,7 @@ export default function SettingPage() {
           </View>
 
           <View style={styles.myName}>
-            <Text style={[{ fontSize: 16 }]}>{nickname} 님</Text>
+            <Text style={{ fontSize: 16 }}>{nickname} 님</Text>
           </View>
         </View>
 
@@ -110,12 +140,10 @@ export default function SettingPage() {
               <Text style={styles.menuFontBold}>기타</Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.noneLineBox}
-              onPress={() => navigation.navigate("LoginScreen")}
-            >
+            <TouchableOpacity style={styles.noneLineBox} onPress={handleLogout}>
               <Text style={styles.menuFont}>로그아웃</Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.noneLineBox}>
               <Text style={[styles.menuFont, { marginBottom: 10 }]}>
                 탈퇴하기
@@ -128,7 +156,11 @@ export default function SettingPage() {
       <StatusBar style="auto" />
       <SettingModal
         isVisible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
+        onClose={() => {
+          setIsModalVisible(false);
+          fetchNickname();
+        }}
+        nickname={nickname}
         setNickname={setNickname}
         setProfileImage={setProfileImage}
       />
@@ -141,7 +173,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     alignItems: "center",
-    justifyContent: "flex-start", // 상단 고정을 위해 flex-start로 변경
+    justifyContent: "flex-start",
   },
   topContainer: {
     width: "100%",
@@ -197,7 +229,6 @@ const styles = StyleSheet.create({
   },
   topFont: {
     fontSize: 20,
-    marginTop: 0,
     textAlign: "center",
     justifyContent: "center",
   },

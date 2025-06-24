@@ -1,194 +1,276 @@
-import React, { useState } from "react";
-import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput } from "react-native";
-import * as ImagePicker from 'expo-image-picker';
+import React, { useState, useEffect } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import IMAGES from "../../../assets";
+import api from "../../api/axiosInstance";
 
-const SettingModal = ({ isVisible, onClose, setNickname, setProfileImage }) => {
-    const [nicknameModalVisible, setNicknameModalVisible] = useState(false); // 닉네임 설정 모달의 상태
-    const [photoModalVisible, setPhotoModalVisible] = useState(false); // 닉네임 설정 모달의 상태
-    const [newNickname, setNewNickname] = useState(""); // New nickname state
+const SettingModal = ({
+  isVisible,
+  onClose,
+  nickname,
+  setNickname,
+  setProfileImage,
+}) => {
+  const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [newNickname, setNewNickname] = useState("");
 
-    // 닉네임 설정 모달 열기
-    const openNicknameModal = () => {
-        setNicknameModalVisible(true);
-    };
+  useEffect(() => {
+    if (isVisible) {
+      setNewNickname(nickname || "");
+    }
+  }, [isVisible, nickname]);
 
-    // 닉네임 설정 모달 닫기
-    const closeNicknameModal = () => {
-        setNicknameModalVisible(false);
-    };
+  const openNicknameModal = () => {
+    setNicknameModalVisible(true);
+    setNewNickname(nickname || "");
+  };
 
-    const openPhotoModal = () => {
-        setPhotoModalVisible(true);
-    };
+  const closeNicknameModal = () => {
+    setNicknameModalVisible(false);
+  };
 
+  const openPhotoModal = () => {
+    setPhotoModalVisible(true);
+  };
 
-    const closePhotoModal = () => {
-        setPhotoModalVisible(false);
-    };
+  const closePhotoModal = () => {
+    setPhotoModalVisible(false);
+  };
 
-    // 확인 버튼 클릭 시 호출되는 함수
-    const handleConfirmNickname = () => {
-        setNickname(newNickname); // Update the nickname in MySetting
-        closeNicknameModal(); // Close the nickname modal
-    };
+  const saveNicknameOnServer = async (nicknameToSave) => {
+    console.log("saveNicknameOnServer called with:", nicknameToSave);
 
-    const handleSelectPhoto = async () => {
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
+    if (!nicknameToSave || nicknameToSave.trim() === "") {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
 
-        if (!result.canceled) {
-            setProfileImage(result.uri);  // 선택한 이미지로 프로필 업데이트
-            closePhotoModal();  // 이미지 선택 후 모달 닫기
-        }
-    };
+    try {
+      let response;
+      const encodedNickname = encodeURIComponent(nicknameToSave.trim());
 
-    // 프로필 사진 삭제
-    const handleDeletePhoto = () => {
-        setProfileImage(IMAGES.SWAPLOGOV2);  // 프로필 기본으로 변경하기
-        closePhotoModal();
-    };
+      if (!nickname || nickname.trim() === "") {
+        response = await api.post(
+          `/member/nickname?nickname=${encodedNickname}`
+        );
+      } else {
+        response = await api.put(
+          `/member/nickname?nickname=${encodedNickname}`
+        );
+      }
 
+      console.log("서버 응답:", response.data);
+      setNickname(nicknameToSave.trim());
+      alert("닉네임이 성공적으로 변경되었습니다.");
+      closeNicknameModal();
+      onClose();
+    } catch (error) {
+      console.error("닉네임 변경 실패:", error.response || error.message);
+      alert("닉네임 변경에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
 
-    return (
-        <>
-            {/* 첫 번째 모달: 프로필 관리 */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={isVisible && !nicknameModalVisible} // 닉네임 설정 모달이 보이지 않을 때만 첫 번째 모달 표시
-                onRequestClose={onClose}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalView}>
-                        <Text style={styles.modalText}>프로필 관리</Text>
+  const handleConfirmNickname = () => {
+    saveNicknameOnServer(newNickname);
+  };
 
-                        <TouchableOpacity style={styles.modalMenu} onPress={openNicknameModal}>
-                            <Text style={styles.menuFont}>닉네임 설정</Text>
-                        </TouchableOpacity>
+  return (
+    <Modal
+      visible={isVisible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalBackground}>
+        <View style={styles.modalContainer}>
+          {!nicknameModalVisible && !photoModalVisible && (
+            <>
+              <Text style={styles.modalTitle}>프로필 관리</Text>
 
-                        <TouchableOpacity style={styles.modalMenu} onPress={openPhotoModal}>
-                            <Text style={styles.menuFont}>프로필 사진 변경</Text>
-                        </TouchableOpacity>
+              <TouchableOpacity
+                onPress={openNicknameModal}
+                style={styles.menuOption}
+              >
+                <Text style={styles.menuText}>닉네임 변경</Text>
+              </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.cBtn} onPress={onClose}>
-                            <Text style={styles.cBtnText}>닫기</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
+              <TouchableOpacity
+                onPress={openPhotoModal}
+                style={styles.menuOption}
+              >
+                <Text style={styles.menuText}>프로필 사진 변경</Text>
+              </TouchableOpacity>
 
-            {/* 두 번째 모달: 닉네임 설정 */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={nicknameModalVisible} // 닉네임 설정 모달의 상태에 따라 표시
-                onRequestClose={closeNicknameModal}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalView}>
-                        <Text style={styles.modalText}>닉네임 설정</Text>
+              <TouchableOpacity
+                onPress={onClose}
+                style={[styles.button, styles.cancelButton]}
+              >
+                <Text style={styles.buttonText}>취소</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
-                        {/* 닉네임 입력 */}
-                        <TextInput
-                            style={styles.input}
-                            placeholder="새 닉네임을 입력하세요"
-                            value={newNickname} // Bind to newNickname state
-                            onChangeText={setNewNickname} // Update newNickname state
-                        />
+          {/* 닉네임 변경 모달 */}
+          {nicknameModalVisible && (
+            <View style={styles.nicknameModalContainer}>
+              <Text style={styles.modalTitle}>닉네임 변경</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="닉네임을 입력하세요."
+                value={newNickname}
+                onChangeText={setNewNickname}
+                maxLength={20}
+                autoFocus={true}
+              />
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={closeNicknameModal}
+                >
+                  <Text style={styles.buttonText}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.confirmButton]}
+                  onPress={handleConfirmNickname}
+                >
+                  <Text style={styles.buttonText}>확인</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
-                        <TouchableOpacity style={styles.cBtn} onPress={handleConfirmNickname}>
-                            <Text style={styles.cBtnText}>확인</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
+          {/* 사진 변경 모달 (기본 이미지로 바꾸기) */}
+          {photoModalVisible && (
+            <View style={styles.photoModalContainer}>
+              <Text style={styles.modalTitle}>사진 변경</Text>
 
-            {/* 세 번째 모달: 프로필 사진 설정 */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={photoModalVisible} // 닉네임 설정 모달의 상태에 따라 표시
-                onRequestClose={closePhotoModal}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalView}>
-                        <Text style={styles.modalText}>프로필 사진 변경</Text>
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={async () => {
+                  // 카메라롤 권한 요청 후 사진 선택
+                  const permissionResult =
+                    await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (!permissionResult.granted) {
+                    alert("사진 접근 권한이 필요합니다.");
+                    return;
+                  }
+                  const pickerResult =
+                    await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      allowsEditing: true,
+                      aspect: [1, 1],
+                      quality: 1,
+                    });
+                  if (!pickerResult.cancelled) {
+                    // 여기서 서버 업로드 로직 추가 필요
+                    setProfileImage({ uri: pickerResult.uri });
+                    closePhotoModal();
+                    onClose();
+                  }
+                }}
+              >
+                <Text style={styles.menuText}>사진 선택</Text>
+              </TouchableOpacity>
 
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={() => {
+                  setProfileImage(IMAGES.LOGO);
+                  closePhotoModal();
+                  onClose();
+                }}
+              >
+                <Text style={styles.menuText}>기본 이미지로 변경</Text>
+              </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.modalMenu} onPress={handleSelectPhoto}>
-                            <Text style={styles.menuFont}>앨범에서 사진 선택</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.modalMenu} onPress={handleDeletePhoto}>
-                            <Text style={styles.menuFont}>프로필 사진 삭제</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.cBtn} onPress={closePhotoModal}>
-                            <Text style={styles.cBtnText}>닫기</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
-
-        </>
-    );
+              <TouchableOpacity
+                style={[styles.menuOption, styles.cancelOption]}
+                onPress={closePhotoModal}
+              >
+                <Text style={styles.menuText}>취소</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
 };
 
-const styles = StyleSheet.create({
-    modalContainer: {
-        flex: 1,
-        justifyContent: "flex-end", // 하단에 배치
-        alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.5)",
-    },
-    modalView: {
-        width: '100%',
-        padding: 20,
-        backgroundColor: "white",
-        borderTopLeftRadius: 10, // 상단 모서리만 둥글게
-        borderTopRightRadius: 10, // 상단 모서리만 둥글게
-        alignItems: "stretch",
-    },
-    modalText: {
-        fontSize: 18,
-        fontWeight: "600",
-        marginBottom: 30,
-        textAlign: "center",
-    },
-    modalMenu: {
-        paddingHorizontal: 10,
-        width: "100%",
-        marginBottom: 20,
-    },
-    menuFont: {
-        fontSize: 16,
-        fontWeight: "400",
-        textAlign: "left",
-    },
-    cBtn: {
-        backgroundColor: "#67574D", // 버튼 배경색
-        padding: 10,
-        borderRadius: 5,
-        alignItems: "center",
-        marginTop: 10,
-    },
-    cBtnText: {
-        color: "white", // 버튼 텍스트 색상
-        fontSize: 16,
-        fontWeight: "bold",
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: "#ccc",
-        padding: 10,
-        borderRadius: 5,
-        marginBottom: 20,
-    },
-});
-
 export default SettingModal;
+
+const styles = StyleSheet.create({
+  modalBackground: {
+    flex: 1,
+    justifyContent: "flex-end", // 하단에 배치
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContainer: {
+    width: "100%",
+    padding: 20,
+    backgroundColor: "white",
+    borderTopLeftRadius: 10, // 상단 모서리만 둥글게
+    borderTopRightRadius: 10, // 상단 모서리만 둥글게
+    alignItems: "stretch",
+  },
+  menuOption: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderColor: "#ccc",
+  },
+  menuText: {
+    fontSize: 16,
+    fontWeight: "400",
+    textAlign: "left",
+  },
+  cancelOption: {
+    borderBottomWidth: 0,
+  },
+  nicknameModalContainer: {},
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  button: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+  },
+  cancelButton: {
+    backgroundColor: "#ccc",
+  },
+  confirmButton: {
+    backgroundColor: "#67574D",
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  photoModalContainer: {},
+});
