@@ -8,12 +8,15 @@ import {
   FlatList,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import api from "../../api/axiosInstance";
 
 export default function MyPost() {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState(0);
+  const [communityPosts, setCommunityPosts] = useState([]);
+  const [freeBoardPosts, setFreeBoardPosts] = useState([]);
 
   const tabs = [
     { id: 0, title: "커뮤니티" },
@@ -21,15 +24,33 @@ export default function MyPost() {
     { id: 2, title: "댓글" },
   ];
 
-  const communityPosts = [
-    { id: "c1", title: "커뮤니티 글 1", date: "2025-06-15" },
-    { id: "c2", title: "커뮤니티 글 2", date: "2025-06-14" },
-  ];
+  useEffect(() => {
+    const fetchCommunityPosts = async () => {
+      try {
+        const res = await api.get("/community");
+        setCommunityPosts(res.data);
+      } catch (error) {
+        console.error("커뮤니티 글 불러오기 실패:", error);
+      }
+    };
 
-  const freeBoardPosts = [
-    { id: "f1", title: "자유게시판 글 1", date: "2025-06-13" },
-    { id: "f2", title: "자유게시판 글 2", date: "2025-06-12" },
-  ];
+    const fetchFreeBoardPosts = async () => {
+      try {
+        const res = await api.get("/general-forum");
+        const transformed = res.data.map((post) => ({
+          id: post.id,
+          title: post.title,
+          date: post.createdAt.slice(0, 10),
+        }));
+        setFreeBoardPosts(transformed);
+      } catch (error) {
+        console.error("자유게시판 글 불러오기 실패:", error);
+      }
+    };
+
+    fetchCommunityPosts();
+    fetchFreeBoardPosts();
+  }, []);
 
   const comments = [
     { id: "cm1", content: "댓글 내용 1", date: "2025-06-11" },
@@ -46,8 +67,10 @@ export default function MyPost() {
   const handlePressItem = (item) => {
     if (activeTab === 0) {
       navigation.navigate("CommuDetailPage", { postId: item.id });
-    } else if (activeTab === 1 || activeTab === 2) {
+    } else if (activeTab === 1) {
       navigation.navigate("FreeBoardDetailPage", { postId: item.id });
+    } else if (activeTab === 2) {
+      navigation.navigate("FreeBoardDetailPage", { postId: item.id }); // 댓글도 자유게시판 글로 연결
     }
   };
 
@@ -71,7 +94,6 @@ export default function MyPost() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 상단바 */}
       <View style={styles.topContainer}>
         <View style={styles.topBtnContainer}>
           <TouchableOpacity
@@ -87,7 +109,6 @@ export default function MyPost() {
         <View style={{ width: "15%" }}></View>
       </View>
 
-      {/* 탭 */}
       <View style={styles.tabContainer}>
         {tabs.map((tab) => (
           <TouchableOpacity
@@ -110,10 +131,9 @@ export default function MyPost() {
         ))}
       </View>
 
-      {/* 글, 댓글 리스트 */}
       <FlatList
         data={getDataByTab()}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10 }}
         showsVerticalScrollIndicator={false}
