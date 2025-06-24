@@ -6,44 +6,67 @@ import {
   View,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../../api/axiosInstance";
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const [memberId, setMemberId] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [nickname, setNickname] = useState("사용자");
+
+  const isFocused = useIsFocused();
 
   useEffect(() => {
-    const fetchMemberId = async () => {
+    const fetchUserInfo = async () => {
       try {
-        const id = await AsyncStorage.getItem("userId");
-        if (id !== null) {
-          setMemberId(id);
-        } else {
-          setMemberId("로그인 정보 없음");
-        }
-      } catch (e) {
-        console.log("AsyncStorage getItem error:", e);
-        setMemberId("정보를 불러올 수 없음");
+        setLoading(true); // 로딩 상태 초기화
+        const response = await api.get("/member/info");
+        setUserInfo(response.data);
+
+        const res = await api.get("/member/nickname");
+        setNickname(res.data || "사용자");
+      } catch (error) {
+        console.error("사용자 정보 불러오기 실패:", error);
+        Alert.alert("오류", "사용자 정보를 가져오지 못했습니다.");
+
+        console.error("닉네임 불러오기 실패:", error);
+        setNickname("사용자");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchMemberId();
-  }, []);
+    if (isFocused) {
+      fetchUserInfo();
+    }
+  }, [isFocused]);
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <SafeAreaView style={styles.container}>
         <View style={styles.userContainer}>
           <MaterialIcons name="account-circle" size={120} color="#ccc" />
-          <Text style={styles.userText}>{memberId || "로딩중..."}</Text>
-          <View style={styles.locContainer}>
-            <MaterialIcons name="location-on" size={18} color="#5E5E5E" />
-            <Text style={styles.adsText}>경기도 용인시 기흥구</Text>
-          </View>
+          {loading ? (
+            <Text style={styles.userText}>로딩중...</Text>
+          ) : (
+            <>
+              <Text style={styles.userText}>{nickname}</Text>
+              <View style={styles.locContainer}>
+                <MaterialIcons name="location-on" size={18} color="#5E5E5E" />
+                <Text style={styles.adsText}>
+                  {userInfo?.address || "주소 정보 없음"}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={styles.menuContainer}>
