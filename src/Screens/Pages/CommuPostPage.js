@@ -8,7 +8,7 @@ import {
     Text,
     ScrollView,
     SafeAreaView,
-    Modal,
+    Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import IMAGES from '../../../assets';
@@ -16,35 +16,22 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 export default function CommuPostPage({ navigation }) {
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
     const [selectedPeople, setSelectedPeople] = useState("1");
-    const [showPeoplePicker, setShowPeoplePicker] = useState(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [isStartDate, setIsStartDate] = useState(true);
-    const [photos, setPhotos] = useState([]);
+    const [photo, setPhoto] = useState(null);  // 단일 사진 상태
+    const [title, setTitle] = useState('');
+    const [contentRecruit, setContentRecruit] = useState('');
+    const [contentIntroduce, setContentIntroduce] = useState('');
+    const [selectedRegion, setSelectedRegion] = useState('서울');
 
-    const MAX_PHOTOS = 8;
-
-    const formatDate = (date) => {
-        const year = date.getFullYear();
-        const month = `${date.getMonth() + 1}`.padStart(2, '0');
-        const day = `${date.getDate()}`.padStart(2, '0');
-        return `${year}/${month}/${day}`;
-    };
-
-    const onDateChange = (event, selectedDate) => {
-        const currentDate = selectedDate || (isStartDate ? startDate : endDate);
-        if (isStartDate) setStartDate(currentDate);
-        else setEndDate(currentDate);
-        setShowDatePicker(false);
-    };
+    const regions = ['서울', '경기', '인천', '전북'];
 
     const handleSelectPhoto = async () => {
-        if (photos.length >= MAX_PHOTOS) return;
-
         const result = await ImagePicker.launchImageLibraryAsync({
             allowsEditing: true,
             aspect: [4, 3],
@@ -53,13 +40,11 @@ export default function CommuPostPage({ navigation }) {
 
         if (!result.canceled) {
             const selectedUri = result.assets[0].uri;
-            setPhotos(prev => [...prev, { uri: selectedUri }].slice(0, MAX_PHOTOS));
+            setPhoto({ uri: selectedUri });
         }
     };
 
     const handleTakePhoto = async () => {
-        if (photos.length >= MAX_PHOTOS) return;
-
         const result = await ImagePicker.launchCameraAsync({
             allowsEditing: true,
             aspect: [4, 3],
@@ -68,7 +53,103 @@ export default function CommuPostPage({ navigation }) {
 
         if (!result.canceled) {
             const photoUri = result.assets[0].uri;
-            setPhotos(prev => [...prev, { uri: photoUri }].slice(0, MAX_PHOTOS));
+            setPhoto({ uri: photoUri });
+        }
+    };
+
+    const removeImage = () => {
+        setPhoto(null);
+    };
+    const handleSubmit = async () => {
+        try {
+            const url = 'http://localhost:8080/cambooks/community';
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error('로그인이 필요합니다.');
+
+            if (!title.trim() || !contentRecruit.trim() || !contentIntroduce.trim()) {
+                alert('제목, 모집 공고, 동아리 소개를 모두 입력하세요.');
+                return;
+            }
+
+            if (!photo) {
+                alert('사진을 반드시 첨부해야 합니다.');
+                return;
+            }
+
+            const regionMap = {
+                '서울': 'SEOUL',
+                '경기': 'GYEONGGI',
+                '인천': 'INCHEON',
+                '전북': 'JEONBUK',
+            };
+
+            const dto = {
+                title: title.trim(),
+                region: regionMap[selectedRegion] || selectedRegion,
+                recruitment: contentRecruit.trim(),
+                introduction: contentIntroduce.trim(),
+                maxParticipants: parseInt(selectedPeople, 10),
+                startDateTime: startDate.toISOString(),
+                endDateTime: endDate.toISOString(),
+            };
+
+            // 1. JSON DTO 파일 생성 (임시 캐시 경로)
+            const dtoFileUri = FileSystem.cacheDirectory + 'community_dto.json';
+            await FileSystem.writeAsStringAsync(dtoFileUri, JSON.stringify(dto), {
+                encoding: FileSystem.EncodingType.UTF8,
+            });
+
+            // 2. FormData 구성
+            const formData = new FormData();
+
+            formData.append('dto', {
+                uri: dtoFileUri,
+                name: 'community_dto.json',
+                type: 'application/json',
+            });
+
+            // 이미지 첨부 (1장)
+            const uri = photo.uri;
+            const filename = uri.split('/').pop() || 'photo.jpg';
+            const ext = filename.split('.').pop().toLowerCase();
+            const type = ext === 'png' ? 'image/png' : 'image/jpeg';
+
+            formData.append('images', {
+                uri,
+                name: filename,
+                type,
+            });
+
+            // 3. 서버 요청
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    // Content-Type 생략 → fetch가 자동 설정
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                console.error('서버 응답:', text);
+                alert('작성에 실패했습니다.');
+                return;
+            }
+
+            const data = await response.json();
+            console.log('커뮤니티 작성 성공:', data);
+
+            // 4. 페이지 이동
+            navigation.navigate('RouteScreen', {
+                screen: 'CommunityScreen',
+                params: { selectedTab: '커뮤니티' },
+            });
+
+
+        } catch (error) {
+            console.error('작성 실패:', error.message);
+            alert('작성 중 문제가 발생했습니다.');
         }
     };
 
@@ -89,7 +170,6 @@ export default function CommuPostPage({ navigation }) {
             <View style={styles.middleView}>
                 <ScrollView>
 
-                    {/* 사진 추가 버튼 */}
                     <View style={[styles.photoContainer, { marginBottom: hp(2) }]}>
                         <TouchableOpacity style={styles.photoEdit} onPress={handleTakePhoto}>
                             <FontAwesome name="camera" size={wp(5)} color="black" />
@@ -97,116 +177,126 @@ export default function CommuPostPage({ navigation }) {
                         </TouchableOpacity>
                         <TouchableOpacity style={[styles.photoEdit, { marginLeft: wp(3) }]} onPress={handleSelectPhoto}>
                             <FontAwesome name="image" size={wp(5)} color="black" />
-                            <Text style={styles.photoText}>{photos.length}/{MAX_PHOTOS}</Text>
+                            <Text style={styles.photoText}>{photo ? 1 : 0}/1</Text>
                         </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.photoHint}>첫 번째 사진이 메인으로 설정됩니다.</Text>
+                    <Text style={styles.photoHint}>사진을 1장만 첨부할 수 있습니다.</Text>
 
-                    {/* 선택된 사진 미리보기 */}
                     <View style={styles.photoPreview}>
-                        {photos.map((photo, index) => (
-                            <Image
-                                key={index}
-                                source={photo}
-                                style={styles.photoImage}
-                            />
-                        ))}
+                        {photo ? (
+                            <View style={styles.imageWrapper}>
+                                <Image
+                                    source={{ uri: photo.uri }}
+                                    style={styles.photoImage}
+                                />
+                                <TouchableOpacity
+                                    onPress={removeImage}
+                                    style={styles.removeBtn}
+                                >
+                                    <FontAwesome name="close" size={12} color="white" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : null}
                     </View>
 
-                    {/* 제목 입력 */}
                     <View style={styles.titleEdit}>
                         <TextInput
                             style={styles.titleInput}
                             placeholder="제목을 입력하세요."
+                            value={title}
+                            onChangeText={setTitle}
                         />
                     </View>
 
-                    {/* 내용 입력 */}
                     <View style={styles.contentsEdit}>
                         <TextInput
                             style={styles.contentsInput}
-                            placeholder="내용을 입력하세요. (500자)"
+                            placeholder="모집 공고를 입력하세요. (500자)"
                             maxLength={500}
-                            multiline={true}
+                            multiline
+                            value={contentRecruit}
+                            onChangeText={setContentRecruit}
+                        />
+
+                    </View>
+
+                    <View style={styles.contentsEdit}>
+                        <TextInput
+                            style={styles.contentsInput}
+                            placeholder="동아리 소개를 입력하세요. (500자)"
+                            maxLength={500}
+                            multiline
+                            value={contentIntroduce}
+                            onChangeText={setContentIntroduce}
                         />
                     </View>
 
-                    {/* 모집 시작일 */}
-                    <View style={styles.dateEdit}>
-                        <TouchableOpacity onPress={() => { setIsStartDate(true); setShowDatePicker(true); }} style={styles.touchable}>
-                            <Text style={styles.dateText}>
-                                모집 시작일: {formatDate(startDate)}
-                            </Text>
-                        </TouchableOpacity>
+                    <View style={[styles.dateEdit, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(3) }]}>
+                        <Text style={[styles.dateText, { width: '40%' }]}>모집 시작일</Text>
+                        <DateTimePicker
+                            value={startDate}
+                            mode="date"
+                            display="default"
+                            onChange={(e, date) => {
+                                if (date && date > endDate) {
+                                    Alert.alert('날짜 오류', '모집 시작일은 모집 종료일보다 늦을 수 없습니다.', [{ text: '확인' }]);
+                                    return;
+                                }
+                                date && setStartDate(date);
+                            }}
+                            style={{ width: '60%' }}
+                        />
                     </View>
 
-                    {/* 모집 종료일 */}
-                    <View style={styles.dateEdit}>
-                        <TouchableOpacity onPress={() => { setIsStartDate(false); setShowDatePicker(true); }} style={styles.touchable}>
-                            <Text style={styles.dateText}>
-                                모집 종료일: {formatDate(endDate)}
-                            </Text>
-                        </TouchableOpacity>
+                    <View style={[styles.dateEdit, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(3) }]}>
+                        <Text style={[styles.dateText, { width: '40%' }]}>모집 종료일</Text>
+                        <DateTimePicker
+                            value={endDate}
+                            mode="date"
+                            display="default"
+                            onChange={(e, date) => {
+                                if (date && date < startDate) {
+                                    Alert.alert('날짜 오류', '모집 종료일은 모집 시작일보다 빠를 수 없습니다.', [{ text: '확인' }]);
+                                    return;
+                                }
+                                date && setEndDate(date);
+                            }}
+                            style={{ width: '60%' }}
+                        />
                     </View>
 
-                    {/* 날짜 선택 모달 */}
-                    <Modal visible={showDatePicker} transparent={true} animationType="slide">
-                        <View style={styles.modalContainer}>
-                            <View style={styles.pickerContainer}>
-                                <DateTimePicker
-                                    value={isStartDate ? startDate : endDate}
-                                    mode="date"
-                                    display="calendar"
-                                    onChange={onDateChange}
-                                />
-                                <TouchableOpacity
-                                    onPress={() => setShowDatePicker(false)}
-                                    style={styles.closePickerBtn}
-                                >
-                                    <Text style={styles.confirmText}>확인</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </Modal>
-
-                    {/* 모집 인원 선택 */}
-                    <View style={styles.numberEdit}>
-                        <TouchableOpacity onPress={() => setShowPeoplePicker(true)} style={styles.touchable}>
-                            <Text style={styles.dateText}>
-                                모집 인원: {selectedPeople}명
-                            </Text>
-                        </TouchableOpacity>
+                    <View style={[styles.dateEdit, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(3) }]}>
+                        <Text style={[styles.dateText, { width: '40%' }]}>지역 선택</Text>
+                        <Picker
+                            selectedValue={selectedRegion}
+                            onValueChange={(itemValue) => setSelectedRegion(itemValue)}
+                            style={{ width: '40%' }}
+                        >
+                            {regions.map((region, index) => (
+                                <Picker.Item key={index} label={region} value={region} />
+                            ))}
+                        </Picker>
                     </View>
 
-                    {/* 인원 선택 모달 */}
-                    <Modal visible={showPeoplePicker} transparent={true} animationType="slide">
-                        <View style={styles.modalContainer}>
-                            <View style={styles.pickerContainer}>
-                                <Picker
-                                    selectedValue={selectedPeople}
-                                    style={styles.picker}
-                                    onValueChange={(itemValue) => setSelectedPeople(itemValue)}
-                                >
-                                    {Array.from({ length: 100 }, (_, i) => (
-                                        <Picker.Item key={i} label={`${i + 1}명`} value={`${i + 1}`} />
-                                    ))}
-                                </Picker>
-                                <TouchableOpacity
-                                    onPress={() => setShowPeoplePicker(false)}
-                                    style={styles.closePickerBtn}
-                                >
-                                    <Text style={styles.confirmText}>확인</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </Modal>
+                    <View style={[styles.dateEdit, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(3) }]}>
+                        <Text style={[styles.dateText, { width: '40%' }]}>모집 인원</Text>
+                        <Picker
+                            selectedValue={selectedPeople}
+                            style={{ width: '40%' }}
+                            onValueChange={(itemValue) => setSelectedPeople(itemValue)}
+                        >
+                            {Array.from({ length: 100 }, (_, i) => (
+                                <Picker.Item key={i} label={`${i + 1}명`} value={`${i + 1}`} />
+                            ))}
+                        </Picker>
+                    </View>
 
                 </ScrollView>
             </View>
 
             <View style={styles.bottomView}>
-                <TouchableOpacity style={styles.postBtn}>
+                <TouchableOpacity style={styles.postBtn} onPress={handleSubmit}>
                     <Text style={styles.postBtnText}>작성 완료</Text>
                 </TouchableOpacity>
             </View>
@@ -215,18 +305,9 @@ export default function CommuPostPage({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: 'white',
-    },
-    topView: {
-        height: hp('10%'),
-        justifyContent: 'center',
-    },
-    middleView: {
-        flex: 1,
-        backgroundColor: 'white',
-    },
+    container: { flex: 1, backgroundColor: 'white' },
+    topView: { height: hp('10%'), justifyContent: 'center' },
+    middleView: { flex: 1, backgroundColor: 'white' },
     bottomView: {
         height: hp('8%'),
         justifyContent: 'center',
@@ -241,6 +322,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: hp(3),
     },
+    imageWrapper: {
+        marginRight: wp('2%'),
+        marginBottom: wp('2%'),
+    },
     photoEdit: {
         justifyContent: 'center',
         alignItems: 'center',
@@ -250,16 +335,8 @@ const styles = StyleSheet.create({
         borderWidth: 0.5,
         borderRadius: wp(3),
     },
-    photoText: {
-        fontSize: wp(3),
-        marginTop: 4,
-    },
-    photoHint: {
-        fontSize: wp(3),
-        color: 'gray',
-        marginLeft: wp(5),
-        marginBottom: hp(2),
-    },
+    photoText: { fontSize: wp(3), marginTop: 4 },
+    photoHint: { fontSize: wp(3), color: 'gray', marginLeft: wp(5), marginBottom: hp(2) },
     photoPreview: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -272,6 +349,14 @@ const styles = StyleSheet.create({
         margin: wp(1),
         borderRadius: wp(2),
     },
+    removeBtn: {
+        position: 'absolute',
+        top: -6,
+        right: -6,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        borderRadius: 10,
+        padding: 3,
+    },
     titleEdit: {
         justifyContent: 'center',
         alignSelf: 'center',
@@ -282,77 +367,28 @@ const styles = StyleSheet.create({
         borderRadius: wp(3),
         marginBottom: hp(3),
     },
-    titleInput: {
-        marginLeft: wp(5),
-    },
+    titleInput: { marginLeft: wp(5) },
     contentsEdit: {
         alignSelf: 'center',
         width: wp(90),
-        height: hp(40),
+        height: hp(20),
         borderColor: 'gray',
         borderWidth: 0.5,
         borderRadius: wp(3),
         marginBottom: hp(3),
     },
-    contentsInput: {
-        padding: wp(5),
-    },
+    contentsInput: { padding: wp(5) },
     dateEdit: {
         justifyContent: 'center',
         alignSelf: 'center',
         width: wp(90),
-        height: hp(6),
         borderColor: 'gray',
         borderWidth: 0.5,
         borderRadius: wp(3),
         marginBottom: hp(3),
+        paddingVertical: hp(1),
     },
-    touchable: {
-        justifyContent: 'center',
-    },
-    dateText: {
-        marginLeft: wp(5),
-        fontSize: wp(4),
-    },
-    numberEdit: {
-        justifyContent: 'center',
-        alignSelf: 'center',
-        width: wp(90),
-        height: hp(6),
-        borderColor: 'gray',
-        borderWidth: 0.5,
-        borderRadius: wp(3),
-        marginBottom: hp(3),
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-    },
-    pickerContainer: {
-        width: wp(60),
-        backgroundColor: 'white',
-        borderRadius: wp(3),
-        padding: wp(3),
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    picker: {
-        height: hp(20),
-        width: '100%',
-    },
-    closePickerBtn: {
-        marginTop: hp(3),
-        padding: wp(3),
-        backgroundColor: '#67574D',
-        borderRadius: wp(3),
-    },
-    confirmText: {
-        fontSize: wp(4),
-        fontWeight: 'bold',
-        color: 'white',
-    },
+    dateText: { fontSize: wp(4) },
     postBtn: {
         justifyContent: 'center',
         alignItems: 'center',

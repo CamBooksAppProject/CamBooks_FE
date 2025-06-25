@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
@@ -13,56 +13,93 @@ import {
 } from 'react-native-responsive-screen';
 import IMAGES from '../../../assets';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function CommunScreen() {
     const navigation = useNavigation();
-    const [posts, setPosts] = useState([
-        {
-            id: 1,
-            title: 'LG 부트캠프 모집',
-            content: '소프트웨어 인재를 양성할 목적으로 설립한 교육기관...',
-            peopleCount: 9,
-        }
-    ]);
+    const [posts, setPosts] = useState([]);
+    const BASE_URL = 'http://localhost:8080';
 
-    useEffect(() => {
-        // fetchData();
-    }, []);
+
 
     const fetchData = async () => {
         try {
-            const response = await fetch('https://your.api.endpoint.com/community');
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
+
+            const response = await fetch("http://localhost:8080/cambooks/community", {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
-            setPosts(data);
+
+            setPosts(Array.isArray(data) ? data : data.posts || []);
         } catch (error) {
-            console.error('API 호출 실패:', error);
+            console.error("API 통신 오류:", error);
         }
     };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchData();
+        }, [])
+    );
+
+
 
 
     const renderItem = ({ item }) => (
         <TouchableOpacity
             style={styles.listView}
-            onPress={() => navigation.navigate('CommuDetailPage')}
+            onPress={() => navigation.navigate('CommuDetailPage', { postId: item.id })}
         >
             <View style={{ flexDirection: 'column' }}>
                 <View style={{ flexDirection: 'row' }}>
-                    <View style={styles.photo}></View>
+                    {item.thumbnailUrl ? (
+                        <Image
+                            source={{ uri: `${BASE_URL}${item.thumbnailUrl}` }}
+                            style={styles.photo}
+                        />
+                    ) : (
+                        <View style={styles.photo} />
+                    )}
                     <Image
-                        source={IMAGES.REDHEART}
-                        resizeMode='contain'
+                        source={IMAGES.EMPTYHEART}
+                        resizeMode="contain"
                         style={styles.heartIcon}
                     />
                 </View>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.contentsFont}>{item.content}</Text>
+                <Text
+                    style={styles.title}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                >
+                    {item.title}
+                </Text>
+
+                <Text
+                    style={styles.contentsFont}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                >
+                    {item.recruitment}
+                </Text>
                 <View style={styles.peopleRow}>
                     <Image
                         source={IMAGES.PEOPLE}
-                        resizeMode='contain'
+                        resizeMode="contain"
                         style={styles.peopleIcon}
                     />
-                    <Text style={styles.iconFont}>{item.peopleCount}</Text>
+                    <Text style={styles.iconFont}>{item.currentParticipants}</Text>
                 </View>
             </View>
         </TouchableOpacity>
@@ -91,7 +128,7 @@ export default function CommunScreen() {
             >
                 <Image
                     source={IMAGES.PLUS}
-                    resizeMode='contain'
+                    resizeMode="contain"
                     style={styles.addIcon}
                 />
             </TouchableOpacity>
@@ -120,6 +157,7 @@ const styles = StyleSheet.create({
         borderColor: '#D0D1D1',
         borderWidth: 1,
         borderRadius: 5,
+        backgroundColor: '#F0F0F0',
     },
     heartIcon: {
         height: wp(5),
@@ -131,13 +169,14 @@ const styles = StyleSheet.create({
         fontSize: wp(3.5),
         fontWeight: 'bold',
         marginLeft: wp(4),
+        marginTop: hp(0.5),
     },
     contentsFont: {
         width: wp(32),
         fontSize: wp(2.5),
         color: '#515a5a',
         marginLeft: wp(4),
-        marginTop: hp(1),
+        marginTop: hp(0.5),
     },
     iconFont: {
         fontSize: wp(2.8),

@@ -1,45 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, Image, TextInput, Text, ScrollView, SafeAreaView, FlatList } from 'react-native';
+import React, { useState } from 'react';
+import {
+    StyleSheet,
+    View,
+    TouchableOpacity,
+    Image,
+    TextInput,
+    Text,
+    ScrollView,
+    SafeAreaView,
+    Alert,
+} from 'react-native';
 import IMAGES from '../../../assets';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function FreeBoardPostPage({ navigation }) {
-    const [selectedOptions, setSelectedOptions] = useState({
-        direct: false,
-        delivery: false,
-        university: false,
-    });
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
 
-    const [items, setItems] = useState([]);
+    const handlePost = async () => {
+        if (!title.trim() || !content.trim()) {
+            Alert.alert('입력 오류', '제목과 내용을 모두 입력하세요.');
+            return;
+        }
 
-    useEffect(() => {
-        // fetchData();
-    }, []);
-
-    const fetchData = async () => {
         try {
-            const response = await fetch('https://your.api.endpoint.com/posts');
-            const data = await response.json();
-            setItems(data);
-        } catch (error) {
-            console.error('API 통신 오류:', error);
+            const token = await AsyncStorage.getItem('accessToken');
+
+            const response = await fetch('http://localhost:8080/cambooks/general-forum', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+                body: JSON.stringify({
+                    title: title.trim(),
+                    content: content.trim(),
+                }),
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                console.error('서버 응답 오류:', text);
+                Alert.alert('작성 실패', `에러 코드: ${response.status}`);
+                return;
+            }
+
+            const result = await response.json();
+            console.log('작성 성공:', result);
+
+
+            navigation.navigate('RouteScreen', {
+                screen: 'FreeBoardPage',
+                params: { selectedTab: '자유게시판' },
+            });
+
+
+
+
+        } catch (err) {
+            console.error('작성 중 오류:', err);
+            Alert.alert('에러', '작성 중 문제가 발생했습니다.');
         }
     };
-
-    const toggleOption = (option) => {
-        setSelectedOptions(prevState => ({
-            ...prevState,
-            [option]: !prevState[option],
-        }));
-    };
-
-    // API에서 받아온 아이템 제목 렌더링
-    const renderItem = ({ item }) => (
-        <View style={styles.itemBox}>
-            <Text style={styles.itemTitle}>{item.title}</Text>
-        </View>
-    );
 
     return (
         <View style={styles.container}>
@@ -56,40 +79,35 @@ export default function FreeBoardPostPage({ navigation }) {
             </View>
 
             <View style={styles.middleView}>
-                <FlatList
-                    data={items}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={renderItem}
-                    style={{ marginTop: hp('3%') }}
-                    ListHeaderComponent={
-                        <>
-                            <View style={styles.titleEdit}>
-                                <TextInput
-                                    style={{ marginLeft: wp('4%'), fontSize: wp('4%') }}
-                                    placeholder="제목을 입력하세요."
-                                />
-                            </View>
-                            <View style={styles.contentsEdit}>
-                                <TextInput
-                                    style={{ padding: wp('4%'), fontSize: wp('3.5%') }}
-                                    placeholder="내용을 입력하세요. (500자)"
-                                    maxLength={500}
-                                    multiline={true}
-                                />
-                            </View>
-                        </>
-                    }
-                />
+                <ScrollView contentContainerStyle={{ paddingVertical: hp('3%') }}>
+                    <View style={styles.titleEdit}>
+                        <TextInput
+                            style={{ marginLeft: wp('4%'), fontSize: wp('4%') }}
+                            placeholder="제목을 입력하세요."
+                            value={title}
+                            onChangeText={setTitle}
+                        />
+                    </View>
+                    <View style={styles.contentsEdit}>
+                        <TextInput
+                            style={{ padding: wp('4%'), fontSize: wp('3.5%') }}
+                            placeholder="내용을 입력하세요. (500자)"
+                            maxLength={500}
+                            multiline={true}
+                            value={content}
+                            onChangeText={setContent}
+                        />
+                    </View>
+                </ScrollView>
             </View>
 
             <View style={styles.bottomView}>
-                <TouchableOpacity style={styles.postBtn}>
+                <TouchableOpacity style={styles.postBtn} onPress={handlePost}>
                     <Text style={{ fontSize: wp('6%'), fontWeight: 'bold', color: 'white' }}>작성 완료</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
-
 }
 
 const styles = StyleSheet.create({
@@ -139,17 +157,5 @@ const styles = StyleSheet.create({
         backgroundColor: '#67574D',
         borderRadius: 15,
         marginBottom: hp('1%'),
-    },
-    itemBox: {
-        borderBottomWidth: 0.5,
-        borderBottomColor: '#ccc',
-        paddingVertical: hp('1.5%'),
-        paddingHorizontal: wp('4%'),
-        width: wp('90%'),
-        alignSelf: 'center',
-    },
-    itemTitle: {
-        fontSize: wp('4.5%'),
-        color: '#333',
     },
 });

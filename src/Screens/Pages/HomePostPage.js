@@ -69,13 +69,19 @@ export default function HomePostPage({ navigation }) {
     };
 
     const postTrade = async () => {
-        const url = 'http://localhost:8080/cambooks/used-trade/1';
+        const memberId = await AsyncStorage.getItem('userId');
+        const url = `http://localhost:8080/cambooks/used-trade/${memberId}`;
         const token = await AsyncStorage.getItem('accessToken');
         if (!token) throw new Error('로그인이 필요합니다.');
 
         const tradeMethod = selectedOptions.direct ? 'DIRECT' : selectedOptions.delivery ? 'DELIVERY' : '';
         if (!title.trim() || !content.trim() || !tradeMethod || isNaN(Number(price))) {
             throw new Error('입력값을 확인하세요.!!');
+        }
+
+        if (images.length === 0) {
+            alert('최소 1장의 사진을 반드시 첨부해야 합니다.');
+            return;
         }
 
         const dto = {
@@ -145,16 +151,20 @@ export default function HomePostPage({ navigation }) {
 
             <View style={styles.middleView}>
                 <ScrollView>
-                    <View style={styles.photoControls}>
-                        <TouchableOpacity onPress={handleTakePhoto} style={styles.cBtn}>
-                            <FontAwesome name="camera" size={wp('5%')} color="white" />
-                            <Text style={styles.cBtnText}>카메라</Text>
+                    <View style={[styles.photoContainer, { marginBottom: hp(2) }]}>
+                        <TouchableOpacity style={styles.photoEdit} onPress={handleTakePhoto}>
+                            <FontAwesome name="camera" size={wp(5)} color="black" />
+                            <Text style={styles.photoText}>카메라</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={handleSelectPhoto} style={[styles.cBtn, { marginLeft: wp('3%') }]}>
-                            <FontAwesome name="image" size={wp('5%')} color="white" />
-                            <Text style={styles.cBtnText}>{images.length}/4</Text>
+                        <TouchableOpacity style={[styles.photoEdit, { marginLeft: wp(3) }]} onPress={handleSelectPhoto}>
+                            <FontAwesome name="image" size={wp(5)} color="black" />
+                            <Text style={styles.photoText}>{images.length}/4</Text>
                         </TouchableOpacity>
                     </View>
+
+                    <Text style={styles.photoHint}>첫 번째 사진이 메인으로 설정됩니다.</Text>
+
+
 
                     <View style={styles.imagePreviewContainer}>
                         {images.map((image, index) => (
@@ -262,10 +272,12 @@ const styles = StyleSheet.create({
         borderTopWidth: 0.5,
         borderTopColor: 'gray',
     },
-    photoControls: {
+    photoContainer: {
         flexDirection: 'row',
-        marginTop: hp('2%'),
-        marginHorizontal: wp('5%'),
+        width: wp(90),
+        alignSelf: 'center',
+        alignItems: 'center',
+        marginBottom: hp(3),
     },
     imagePreviewContainer: {
         flexDirection: 'row',
@@ -343,18 +355,23 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         marginBottom: hp('1%'),
     },
-    cBtn: {
-        flexDirection: 'row',
+    photoEdit: {
+        justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#67574D',
-        borderRadius: 15,
-        paddingVertical: hp('1%'),
-        paddingHorizontal: wp('4%'),
+        width: wp(12),
+        height: wp(12),
+        borderColor: 'gray',
+        borderWidth: 0.5,
+        borderRadius: wp(3),
     },
-    cBtnText: {
-        color: 'white',
-        fontSize: wp('3.5%'),
-        marginLeft: wp('2%'),
-        fontWeight: 'bold',
+    photoText: {
+        fontSize: wp(3),
+        marginTop: 4,
+    },
+    photoHint: {
+        fontSize: wp(3),
+        color: 'gray',
+        marginLeft: wp(5),
+        marginBottom: hp(2),
     },
 });
