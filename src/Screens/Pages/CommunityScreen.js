@@ -13,13 +13,23 @@ import {
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 
+import { useEffect } from "react";
+import { useRoute } from "@react-navigation/native";
+
 import CommunityPage from "./CommunityPage";
 import FreeBoardPage from "./FreeBoardPage";
 
 const buttonData = ["커뮤니티", "자유게시판"];
 
 const CommunityScreen = () => {
+  const route = useRoute();
   const [selectedTab, setSelectedTab] = useState("커뮤니티");
+
+  useEffect(() => {
+    if (route.params?.selectedTab) {
+      setSelectedTab(route.params.selectedTab);
+    }
+  }, [route.params?.selectedTab]);
 
   const renderButton = (label) => {
     const isSelected = selectedTab === label;

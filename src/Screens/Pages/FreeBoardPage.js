@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
 import {
     StyleSheet,
     Text,
@@ -13,43 +14,53 @@ import {
 } from 'react-native-responsive-screen';
 import IMAGES from '../../../assets';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function FreeBoard() {
+
+export default function FreeBoardPage() {
     const navigation = useNavigation();
-    const [posts, setPosts] = useState([
-        {
-            id: 1,
-            title: '노트북 추천좀',
-            content: '맥북이 좋을까요? 갤북이 좋을까요?',
-            author: '홍길동',
-            time: '14:54',
-            likes: 8,
-            comments: 32,
-        },
-    ]);
-
-    useEffect(() => {
-        // fetchPosts();
-    }, []);
+    const [posts, setPosts] = useState([]);
 
     const fetchPosts = async () => {
         try {
-            const res = await fetch('https://your.api.endpoint.com/freeboard');
-            const data = await res.json();
-            setPosts(data);
+            const token = await AsyncStorage.getItem('accessToken');
+
+            const response = await fetch('http://localhost:8080/cambooks/general-forum', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error('불러오기 실패:', errText);
+                return;
+            }
+
+            const data = await response.json();
+            setPosts(data); // 게시글 목록 저장
         } catch (err) {
             console.error('게시글 불러오기 실패:', err);
         }
     };
 
+    useFocusEffect(
+        useCallback(() => {
+            fetchPosts();
+        }, [])
+    );
+
+
     const renderItem = ({ item }) => (
         <TouchableOpacity
             style={styles.listView}
-            onPress={() => navigation.navigate('FreeBoardDetailPage')}
+            onPress={() => navigation.navigate('FreeBoardDetailPage', { postId: item.id })}
         >
             <View style={{ flexDirection: 'column' }}>
                 <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.contentsFont}>{item.content}</Text>
+                <Text style={styles.contentsFont} numberOfLines={2}>{item.content}</Text>
 
                 <View style={styles.infoRow}>
                     <View style={styles.userInfo}>
@@ -58,8 +69,8 @@ export default function FreeBoard() {
                             resizeMode="contain"
                             style={styles.profileIcon}
                         />
-                        <Text style={styles.nameFont}>{item.author}</Text>
-                        <Text style={styles.timeFont}>{item.time}</Text>
+                        <Text style={styles.nameFont}>{item.writerName}</Text>
+                        <Text style={styles.timeFont}>{item.createdAt?.split('T')[0]}</Text>
                     </View>
 
                     <View style={styles.statsRow}>
@@ -68,13 +79,13 @@ export default function FreeBoard() {
                             resizeMode="contain"
                             style={styles.icon}
                         />
-                        <Text style={styles.iconFont}>{item.likes}</Text>
+                        <Text style={styles.iconFont}>{item.postLikeCount ?? 0}</Text>
                         <Image
                             source={IMAGES.COMMENT}
                             resizeMode="contain"
                             style={styles.icon}
                         />
-                        <Text style={styles.iconFont}>{item.comments}</Text>
+                        <Text style={styles.iconFont}>0</Text>
                     </View>
                 </View>
             </View>
@@ -87,7 +98,7 @@ export default function FreeBoard() {
                 data={posts}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
-                contentContainerStyle={{ paddingBottom: hp(14) }} // 하단 여유 공간
+                contentContainerStyle={{ paddingBottom: hp(14) }}
             />
 
             <TouchableOpacity

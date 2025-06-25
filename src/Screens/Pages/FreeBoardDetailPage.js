@@ -1,207 +1,152 @@
-import { StyleSheet, View, TouchableOpacity, Image, SafeAreaView, Text, ScrollView, TextInput } from 'react-native';
-import React, { useState } from 'react';
-
+import React, { useState, useEffect } from 'react';
+import {
+    StyleSheet, View, TouchableOpacity, Image, SafeAreaView,
+    Text, ScrollView, TextInput, Alert
+} from 'react-native';
 import IMAGES from '../../../assets';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export default function FreeBoardDetailPage({ route, navigation }) {
+    const { postId } = route.params;
+    const [post, setPost] = useState(null);
+    const [comments, setComments] = useState([]);
+    const [commentText, setCommentText] = useState('');
+    const [isHeartFilled, setIsHeartFilled] = useState(false);
 
-export default function FreeBoardDetailPage({ navigation }) {
+    useEffect(() => {
+        fetchPostDetail();
+        fetchComments();
+    }, []);
 
-    const [isHeartFilled, setIsHeartFilled] = useState(true);
+    const fetchPostDetail = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`http://localhost:8080/cambooks/general-forum/${postId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` })
+                }
+            });
+            if (!res.ok) throw new Error(`에러 코드: ${res.status}`);
+            const data = await res.json();
+            setPost(data);
+        } catch (err) {
+            console.error('게시글 불러오기 실패:', err);
+        }
+    };
+
+    const fetchComments = async () => {
+        try {
+            const res = await fetch(`http://localhost:8080/cambooks/general-forum/${postId}/comments`);
+            const data = await res.json();
+            setComments(data);
+        } catch (err) {
+            console.error('댓글 불러오기 실패:', err);
+        }
+    };
+
+    const handleCommentSubmit = async () => {
+        if (!commentText.trim()) return;
+
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`http://localhost:8080/cambooks/general-forum/${postId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+                body: JSON.stringify({ content: commentText.trim() })
+            });
+
+            if (!res.ok) throw new Error('댓글 등록 실패');
+            setCommentText('');
+            fetchComments(); // 등록 후 새로 불러오기
+        } catch (err) {
+            console.error(err);
+            Alert.alert('오류', '댓글 작성 중 문제가 발생했습니다.');
+        }
+    };
+
     const handleHeartPress = () => {
         setIsHeartFilled(!isHeartFilled);
+        // 좋아요 처리 API 필요 시 여기에 작성
     };
+
+    if (!post) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text>게시글을 불러오는 중입니다...</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
             <SafeAreaView />
             <View style={styles.topView}>
-                <TouchableOpacity onPress={() => navigation.navigate("RouteScreen")}
-                    style={{ marginLeft: 15, }}>
-                    <Image
-                        source={IMAGES.BACK}
-                        resizeMode="contain"
-                        tintColor="#474747"
-                        style={{ width: 25, height: 25, }}
-                    />
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 15 }}>
+                    <Image source={IMAGES.BACK} resizeMode="contain" tintColor="#474747" style={{ width: 25, height: 25 }} />
                 </TouchableOpacity>
             </View>
+
             <View style={styles.middleView}>
                 <ScrollView>
+                    <View style={{ padding: 15 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Image source={IMAGES.POSTPROFILE} style={{ height: 25, width: 25 }} />
+                            <Text style={styles.nameFont}>{post.writerName}</Text>
+                            <Text style={styles.timeFont}>{post.createdAt?.slice(0, 10)}</Text>
+                        </View>
 
+                        <Text style={styles.titleFont}>{post.title}</Text>
+                        <Text style={styles.contentsFont}>{post.content}</Text>
 
-
-                    <View>
-                        <ScrollView>
-                            <View>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 15, marginTop: 15, }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-
-                                        <Image source={IMAGES.POSTPROFILE}
-                                            resizeMode='contain'
-                                            style={{ height: 25, width: 25, }}>
-                                        </Image>
-                                        <Text style={styles.nameFont}>홍길동</Text>
-                                        <Text style={styles.timeFont}>24/08/31/14:54</Text>
-                                        <TouchableOpacity>
-                                            <Image source={IMAGES.THREEDOT}
-                                                resizeMode='contain'
-                                                style={{ height: 13, width: 13, marginLeft: 10 }}>
-                                            </Image>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            </View>
-
-                            <View style={{ padding: 15, paddingBottom: -15, }}>
-                                <Text style={styles.titleFont}>
-                                    슈슈퍼퍼
-                                </Text>
-                            </View>
-
-                            <View style={{ padding: 15, }}>
-                                <Text style={styles.contentsFont}>
-                                    사건은 다가와, ah-oh, ayy 거세게 커져가, ah-oh, ayy That tick, that tick, tick bomb That tick, that tick, tick bomb
-                                </Text>
-                            </View>
-
-                            <View style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'flex-end',
-                                marginRight: 20,
-                                marginTop: 25,
-                            }}>
-
-                                <TouchableOpacity style={styles.heartBtnView} onPress={handleHeartPress}>
-                                    <Image
-                                        source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
-                                        resizeMode="contain"
-                                        style={{ width: 20, height: 20, }}
-                                    />
-                                </TouchableOpacity>
-                            </View>
-                            <View style={styles.line}></View>
-
-                            <View style={styles.commentView}>
-
-                                <Image source={IMAGES.POSTPROFILE}
-                                    resizeMode='contain'
-                                    tintColor="gray"
-                                    style={{ height: 20, width: 20, }}>
-                                </Image>
-                                <Text style={styles.commentName}>홍길동</Text>
-                                <Text style={styles.commentFont}>에스파에스파</Text>
-                                <View style={{ marginLeft: 150 }}>
-                                    <TouchableOpacity style={{ marginLeft: 10 }}>
-                                        <Image source={IMAGES.THREEDOT}
-                                            resizeMode='contain'
-                                            style={{ height: 11, width: 11 }}>
-                                        </Image>
-                                    </TouchableOpacity>
-                                    <View style={{ flexDirection: 'row', marginTop: 5, alignItems: 'center' }}>
-                                        <Image source={IMAGES.GOOD}
-                                            resizeMode='contain'
-                                            style={{ height: 9, width: 9 }}>
-                                        </Image>
-                                        <Text style={styles.goodFont}>4</Text>
-                                    </View>
-                                </View>
-
-
-                            </View>
-
-                            <View style={styles.commentView}>
-
-                                <Image source={IMAGES.POSTPROFILE}
-                                    resizeMode='contain'
-                                    tintColor="gray"
-                                    style={{ height: 20, width: 20, }}>
-                                </Image>
-                                <Text style={styles.commentName}>홍길동</Text>
-                                <Text style={styles.commentFont}>에스파에스파</Text>
-                                <View style={{ marginLeft: 150 }}>
-                                    <TouchableOpacity style={{ marginLeft: 10 }}>
-                                        <Image source={IMAGES.THREEDOT}
-                                            resizeMode='contain'
-                                            style={{ height: 11, width: 11 }}>
-                                        </Image>
-                                    </TouchableOpacity>
-                                    <View style={{ flexDirection: 'row', marginTop: 5, alignItems: 'center' }}>
-                                        <Image source={IMAGES.GOOD}
-                                            resizeMode='contain'
-                                            style={{ height: 9, width: 9 }}>
-                                        </Image>
-                                        <Text style={styles.goodFont}>4</Text>
-                                    </View>
-                                </View>
-
-
-                            </View>
-
-
-                            <View style={styles.commentView}>
-
-                                <Image source={IMAGES.POSTPROFILE}
-                                    resizeMode='contain'
-                                    tintColor="gray"
-                                    style={{ height: 20, width: 20, }}>
-                                </Image>
-                                <Text style={styles.commentName}>홍길동</Text>
-                                <Text style={styles.commentFont}>에스파에스파</Text>
-                                <View style={{ marginLeft: 150 }}>
-                                    <TouchableOpacity style={{ marginLeft: 10 }}>
-                                        <Image source={IMAGES.THREEDOT}
-                                            resizeMode='contain'
-                                            style={{ height: 11, width: 11 }}>
-                                        </Image>
-                                    </TouchableOpacity>
-                                    <View style={{ flexDirection: 'row', marginTop: 5, alignItems: 'center' }}>
-                                        <Image source={IMAGES.GOOD}
-                                            resizeMode='contain'
-                                            style={{ height: 9, width: 9 }}>
-                                        </Image>
-                                        <Text style={styles.goodFont}>4</Text>
-                                    </View>
-                                </View>
-
-
-                            </View>
-
-
-
-
-                        </ScrollView>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 25 }}>
+                            <TouchableOpacity style={styles.heartBtnView} onPress={handleHeartPress}>
+                                <Image
+                                    source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
+                                    resizeMode="contain"
+                                    style={{ width: 20, height: 20 }}
+                                />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
+                    <View style={styles.line} />
 
+                    {/* 댓글 목록 */}
+                    <View style={{ paddingHorizontal: 15 }}>
+                        {comments.map((comment, idx) => (
+                            <View key={idx} style={styles.commentView}>
+                                <Image source={IMAGES.POSTPROFILE} style={{ height: 20, width: 20 }} />
+                                <Text style={styles.commentName}>{comment.writerName}</Text>
+                                <Text style={styles.commentFont}>{comment.content}</Text>
+                            </View>
+                        ))}
+                    </View>
 
-
+                    <View style={{ height: 80 }} /> {/* 하단 입력창 가리기 방지 */}
                 </ScrollView>
-
             </View>
+
+            {/* 댓글 입력창 */}
             <View style={styles.bottomView}>
                 <View style={styles.inputView}>
-                    <View style={styles.input}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="댓글을 입력하세요.">
-                        </TextInput>
-                    </View>
-                    <TouchableOpacity style={styles.sendBtnView}>
-                        <Image
-                            source={IMAGES.SEND}
-                            resizeMode="contain"
-                            tintColor="white"
-                            style={{ width: 25, height: 25, }}
-                        />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="댓글을 입력하세요."
+                        value={commentText}
+                        onChangeText={setCommentText}
+                    />
+                    <TouchableOpacity style={styles.sendBtnView} onPress={handleCommentSubmit}>
+                        <Image source={IMAGES.SEND} style={{ width: 25, height: 25, tintColor: 'white' }} />
                     </TouchableOpacity>
                 </View>
-
             </View>
-        </View >
+        </View>
     );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
