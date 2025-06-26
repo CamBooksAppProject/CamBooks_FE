@@ -21,6 +21,7 @@ export default function HomeDetailPage({ navigation, route }) {
 
     useEffect(() => {
         fetchPostDetail();
+        loadHeartStatus();
     }, []);
 
     const fetchPostDetail = async () => {
@@ -40,15 +41,39 @@ export default function HomeDetailPage({ navigation, route }) {
 
             const data = await response.json();
             console.log("post data:", data);
+            data.viewCount += 1;
             setPost(data);
-            setIsHeartFilled(data.isLiked || false);
         } catch (error) {
             console.error("상세 API 오류:", error);
         }
     };
 
-    const handleHeartPress = () => {
-        setIsHeartFilled(!isHeartFilled);
+    const loadHeartStatus = async () => {
+        try {
+            const key = `liked_usedTrade_${postId}`;
+            const saved = await AsyncStorage.getItem(key);
+            setIsHeartFilled(saved === 'true');
+        } catch (e) {
+            console.error('좋아요 상태 불러오기 실패:', e);
+        }
+    };
+
+    const handleHeartPress = async () => {
+        try {
+            const newState = !isHeartFilled;
+            setIsHeartFilled(newState);
+
+            const key = `liked_usedTrade_${postId}`;
+            if (newState) {
+                await AsyncStorage.setItem(key, 'true');
+                setPost(prev => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
+            } else {
+                await AsyncStorage.removeItem(key);
+                setPost(prev => ({ ...prev, postLikeCount: Math.max(prev.postLikeCount - 1, 0) }));
+            }
+        } catch (e) {
+            console.error('좋아요 상태 저장 실패:', e);
+        }
     };
 
     if (!post) {
@@ -161,7 +186,8 @@ export default function HomeDetailPage({ navigation, route }) {
             </View>
 
             <View style={styles.bottomView}>
-                <TouchableOpacity style={styles.heartBtnView} onPress={handleHeartPress}>
+                <TouchableOpacity style={styles.heartBtnView}
+                    onPress={handleHeartPress}>
                     <Image
                         source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
                         resizeMode="contain"

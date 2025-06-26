@@ -41,8 +41,23 @@ export default function CommunScreen() {
             }
 
             const data = await response.json();
+            const postList = Array.isArray(data) ? data : data.posts || [];
 
-            setPosts(Array.isArray(data) ? data : data.posts || []);
+            // ✅ 좋아요 상태 불러오기
+            const keys = await AsyncStorage.getAllKeys();
+            const likedKeys = keys.filter(key => key.startsWith('liked_community_'));
+            const entries = await AsyncStorage.multiGet(likedKeys);
+
+            const likedPostIds = entries
+                .filter(([_, value]) => value === 'true')
+                .map(([key]) => parseInt(key.replace('liked_community_', '')));
+
+            const merged = postList.map(post => ({
+                ...post,
+                isLiked: likedPostIds.includes(post.id),
+            }));
+
+            setPosts(merged);
         } catch (error) {
             console.error("API 통신 오류:", error);
         }
@@ -57,53 +72,44 @@ export default function CommunScreen() {
 
 
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.listView}
-            onPress={() => navigation.navigate('CommuDetailPage', { postId: item.id })}
-        >
-            <View style={{ flexDirection: 'column' }}>
-                <View style={{ flexDirection: 'row' }}>
-                    {item.thumbnailUrl ? (
-                        <Image
-                            source={{ uri: `${BASE_URL}${item.thumbnailUrl}` }}
-                            style={styles.photo}
-                        />
-                    ) : (
-                        <View style={styles.photo} />
-                    )}
-                    <Image
-                        source={IMAGES.EMPTYHEART}
-                        resizeMode="contain"
-                        style={styles.heartIcon}
-                    />
-                </View>
-                <Text
-                    style={styles.title}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                >
-                    {item.title}
-                </Text>
+    const renderItem = ({ item }) => {
+        const heartImage = item.isLiked ? IMAGES.REDHEART : IMAGES.EMPTYHEART;
 
-                <Text
-                    style={styles.contentsFont}
-                    numberOfLines={2}
-                    ellipsizeMode="tail"
-                >
-                    {item.recruitment}
-                </Text>
-                <View style={styles.peopleRow}>
-                    <Image
-                        source={IMAGES.PEOPLE}
-                        resizeMode="contain"
-                        style={styles.peopleIcon}
-                    />
-                    <Text style={styles.iconFont}>{item.currentParticipants}</Text>
+        return (
+            <TouchableOpacity
+                style={styles.listView}
+                onPress={() => navigation.navigate('CommuDetailPage', { postId: item.id })}
+            >
+                <View style={{ flexDirection: 'column' }}>
+                    <View style={{ flexDirection: 'row' }}>
+                        {item.thumbnailUrl ? (
+                            <Image
+                                source={{ uri: `${BASE_URL}${item.thumbnailUrl}` }}
+                                style={styles.photo}
+                            />
+                        ) : (
+                            <View style={styles.photo} />
+                        )}
+                        <Image
+                            source={heartImage}
+                            resizeMode="contain"
+                            style={styles.heartIcon}
+                        />
+                    </View>
+                    <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+                        {item.title}
+                    </Text>
+                    <Text style={styles.contentsFont} numberOfLines={2} ellipsizeMode="tail">
+                        {item.recruitment}
+                    </Text>
+                    <View style={styles.peopleRow}>
+                        <Image source={IMAGES.PEOPLE} resizeMode="contain" style={styles.peopleIcon} />
+                        <Text style={styles.iconFont}>{item.currentParticipants}</Text>
+                    </View>
                 </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <View style={styles.container}>
