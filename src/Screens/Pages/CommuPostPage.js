@@ -28,6 +28,8 @@ export default function CommuPostPage({ navigation }) {
     const [contentRecruit, setContentRecruit] = useState('');
     const [contentIntroduce, setContentIntroduce] = useState('');
     const [selectedRegion, setSelectedRegion] = useState('서울');
+    const [recruitAlertShown, setRecruitAlertShown] = useState(false);
+    const [introduceAlertShown, setIntroduceAlertShown] = useState(false);
 
     const regions = ['서울', '경기', '인천', '전북'];
 
@@ -203,7 +205,7 @@ export default function CommuPostPage({ navigation }) {
                     <View style={styles.titleEdit}>
                         <TextInput
                             style={styles.titleInput}
-                            placeholder="제목을 입력하세요."
+                            placeholder="동아리 이름을 입력하세요."
                             value={title}
                             onChangeText={setTitle}
                         />
@@ -216,7 +218,16 @@ export default function CommuPostPage({ navigation }) {
                             maxLength={500}
                             multiline
                             value={contentRecruit}
-                            onChangeText={setContentRecruit}
+                            onChangeText={(text) => {
+                                if (text.length >= 500 && !recruitAlertShown) {
+                                    alert('모집 공고는 500자까지만 입력할 수 있습니다.');
+                                    setRecruitAlertShown(true);
+                                }
+                                if (text.length < 500 && recruitAlertShown) {
+                                    setRecruitAlertShown(false);
+                                }
+                                setContentRecruit(text);
+                            }}
                         />
 
                     </View>
@@ -228,7 +239,16 @@ export default function CommuPostPage({ navigation }) {
                             maxLength={500}
                             multiline
                             value={contentIntroduce}
-                            onChangeText={setContentIntroduce}
+                            onChangeText={(text) => {
+                                if (text.length >= 500 && !introduceAlertShown) {
+                                    alert('동아리 소개는 500자까지만 입력할 수 있습니다.');
+                                    setIntroduceAlertShown(true);
+                                }
+                                if (text.length < 500 && introduceAlertShown) {
+                                    setIntroduceAlertShown(false);
+                                }
+                                setContentIntroduce(text);
+                            }}
                         />
                     </View>
 
