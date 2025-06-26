@@ -18,6 +18,8 @@ import api from "../../api/axiosInstance";
 export default function ChangePw() {
   const navigation = useNavigation();
 
+  const [step, setStep] = useState(1); // 1: 현재 비밀번호 확인, 2: 새 비밀번호 입력
+
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
@@ -46,30 +48,37 @@ export default function ChangePw() {
     }
   }, [newPw]);
 
-  const handleCompleteChange = async () => {
+  const checkCurrentPassword = async () => {
     try {
-      const response = await api.put("/member/password", {
-        currentPassword: currentPw,
-        newPassword: newPw,
+      const response = await api.post("/member/check-password", {
+        password: currentPw,
       });
 
       if (response.status === 200) {
-        Alert.alert(
-          "비밀번호 변경 완료",
-          "비밀번호가 성공적으로 변경되었습니다.",
-          [{ text: "확인", onPress: () => navigation.navigate("SettingPage") }]
-        );
-      } else {
-        Alert.alert("오류", "비밀번호 변경 중 문제가 발생했습니다.");
+        setStep(2);
       }
     } catch (error) {
-      console.error("비밀번호 변경 실패:", error.response || error.message);
-
-      if (error.response && error.response.status === 400) {
+      if (error.response?.status === 401) {
         setErrorMessage("현재 비밀번호가 올바르지 않습니다.");
       } else {
-        Alert.alert("오류", "비밀번호 변경에 실패했습니다. 다시 시도해주세요.");
+        Alert.alert("오류", "비밀번호 확인 중 오류가 발생했습니다.");
       }
+    }
+  };
+
+  const updateNewPassword = async () => {
+    try {
+      const response = await api.post("/member/update-password", {
+        password: newPw,
+      });
+
+      if (response.status === 200) {
+        Alert.alert("완료", "비밀번호가 성공적으로 변경되었습니다.", [
+          { text: "확인", onPress: () => navigation.navigate("SettingPage") },
+        ]);
+      }
+    } catch (error) {
+      Alert.alert("오류", "비밀번호 변경 중 문제가 발생했습니다.");
     }
   };
 
@@ -102,91 +111,105 @@ export default function ChangePw() {
       >
         <View style={styles.inputSection}>
           {/* 현재 비밀번호 입력 */}
-          <TextInput
-            style={styles.currentPwInput}
-            placeholder="현재 비밀번호를 입력해주세요."
-            value={currentPw}
-            onChangeText={(text) => {
-              setCurrentPw(text);
-              setErrorMessage("");
-            }}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-          {errorMessage !== "" && (
-            <Text style={styles.errorText}>{errorMessage}</Text>
+          {step === 1 && (
+            <>
+              <TextInput
+                style={styles.currentPwInput}
+                placeholder="현재 비밀번호를 입력해주세요."
+                value={currentPw}
+                onChangeText={(text) => {
+                  setCurrentPw(text);
+                  setErrorMessage("");
+                }}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+              {errorMessage !== "" && (
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              )}
+            </>
           )}
 
-          {/* 새 비밀번호 */}
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="새로운 비밀번호를 입력해주세요."
-              value={newPw}
-              onChangeText={(text) => {
-                setNewPw(text);
-                setErrorMessage("");
-              }}
-              secureTextEntry={!showNewPw}
-              autoCapitalize="none"
-            />
-            <TouchableOpacity
-              onPress={() => setShowNewPw(!showNewPw)}
-              style={styles.eyeIcon}
-            >
-              <Ionicons
-                name={showNewPw ? "eye-off" : "eye"}
-                size={20}
-                color="#888"
-              />
-            </TouchableOpacity>
-          </View>
-          {passwordValidMessage !== "" && (
-            <Text style={styles.errorText}>{passwordValidMessage}</Text>
-          )}
+          {/* 새 비밀번호 입력 */}
+          {step === 2 && (
+            <>
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="새로운 비밀번호를 입력해주세요."
+                  value={newPw}
+                  onChangeText={(text) => {
+                    setNewPw(text);
+                    setErrorMessage("");
+                  }}
+                  secureTextEntry={!showNewPw}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowNewPw(!showNewPw)}
+                  style={styles.eyeIcon}
+                >
+                  <Ionicons
+                    name={showNewPw ? "eye-off" : "eye"}
+                    size={20}
+                    color="#888"
+                  />
+                </TouchableOpacity>
+              </View>
+              {passwordValidMessage !== "" && (
+                <Text style={styles.errorText}>{passwordValidMessage}</Text>
+              )}
 
-          {/* 새 비밀번호 확인 */}
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="새로운 비밀번호를 다시 입력해주세요."
-              value={confirmPw}
-              onChangeText={(text) => {
-                setConfirmPw(text);
-                setErrorMessage("");
-              }}
-              secureTextEntry={!showConfirmPw}
-              autoCapitalize="none"
-            />
-            <TouchableOpacity
-              onPress={() => setShowConfirmPw(!showConfirmPw)}
-              style={styles.eyeIcon}
-            >
-              <Ionicons
-                name={showConfirmPw ? "eye-off" : "eye"}
-                size={20}
-                color="#888"
-              />
-            </TouchableOpacity>
-          </View>
-          {newPw !== confirmPw && confirmPw.length > 0 && (
-            <Text style={styles.errorText}>비밀번호가 일치하지 않습니다.</Text>
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="새로운 비밀번호를 다시 입력해주세요."
+                  value={confirmPw}
+                  onChangeText={(text) => {
+                    setConfirmPw(text);
+                    setErrorMessage("");
+                  }}
+                  secureTextEntry={!showConfirmPw}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPw(!showConfirmPw)}
+                  style={styles.eyeIcon}
+                >
+                  <Ionicons
+                    name={showConfirmPw ? "eye-off" : "eye"}
+                    size={20}
+                    color="#888"
+                  />
+                </TouchableOpacity>
+              </View>
+              {newPw !== confirmPw && confirmPw.length > 0 && (
+                <Text style={styles.errorText}>
+                  비밀번호가 일치하지 않습니다.
+                </Text>
+              )}
+            </>
           )}
         </View>
 
-        {/* 비밀번호 변경 버튼 */}
+        {/* 버튼 */}
         <View style={styles.bottomBtnContainer}>
           <TouchableOpacity
             style={[
               styles.completeBtn,
-              isNewPwValid
+              (step === 1 && currentPw) || (step === 2 && isNewPwValid)
                 ? { backgroundColor: "#67574D" }
                 : { backgroundColor: "#BEBEBE" },
             ]}
-            disabled={!isNewPwValid}
-            onPress={handleCompleteChange}
+            disabled={
+              (step === 1 && currentPw.length === 0) ||
+              (step === 2 && !isNewPwValid)
+            }
+            onPress={step === 1 ? checkCurrentPassword : updateNewPassword}
           >
-            <Text style={styles.btnfont}>비밀번호 변경</Text>
+            <Text style={styles.btnfont}>
+              {step === 1 ? "비밀번호 확인" : "비밀번호 변경"}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
