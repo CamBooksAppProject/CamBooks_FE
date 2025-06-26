@@ -16,6 +16,7 @@ export default function FreeBoardDetailPage({ route, navigation }) {
     useEffect(() => {
         fetchPostDetail();
         fetchComments();
+        loadHeartStatus();
     }, []);
 
     const fetchPostDetail = async () => {
@@ -68,9 +69,30 @@ export default function FreeBoardDetailPage({ route, navigation }) {
         }
     };
 
-    const handleHeartPress = () => {
-        setIsHeartFilled(!isHeartFilled);
-        // 좋아요 처리 API 필요 시 여기에 작성
+    const loadHeartStatus = async () => {
+        try {
+            const key = `liked_generalForum_${postId}`;
+            const saved = await AsyncStorage.getItem(key);
+            setIsHeartFilled(saved === 'true');
+        } catch (e) {
+            console.error('좋아요 상태 불러오기 실패:', e);
+        }
+    };
+
+    const handleHeartPress = async () => {
+        try {
+            const newState = !isHeartFilled;
+            setIsHeartFilled(newState);
+
+            const key = `liked_generalForum_${postId}`;
+            if (newState) {
+                await AsyncStorage.setItem(key, 'true');
+            } else {
+                await AsyncStorage.removeItem(key);
+            }
+        } catch (e) {
+            console.error('좋아요 상태 저장 실패:', e);
+        }
     };
 
     if (!post) {

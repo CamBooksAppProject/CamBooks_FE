@@ -10,6 +10,7 @@ export default function CommuDetailPage({ navigation, route }) {
     const [post, setPost] = useState(null);
     const [isHeartFilled, setIsHeartFilled] = useState(false);
     const [focusedButton, setFocusedButton] = useState('모집공고');
+    const [isJoined, setIsJoined] = useState(false);
 
     const regionMap = {
         SEOUL: '서울',
@@ -23,6 +24,8 @@ export default function CommuDetailPage({ navigation, route }) {
 
     useEffect(() => {
         fetchPostDetail();
+        loadHeartStatus();
+        loadJoinStatus();
     }, []);
 
     const fetchPostDetail = async () => {
@@ -41,22 +44,78 @@ export default function CommuDetailPage({ navigation, route }) {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
-            console.log('🔍 받아온 post 데이터:', data);
+            console.log(' 받아온 post 데이터:', data);
             setPost(data);
-            // 좋아요 정보가 있으면 반영 (없으면 false)
-            setIsHeartFilled(data.isLiked || false);
         } catch (error) {
             console.error('상세 API 오류:', error);
         }
     };
 
-    const handleHeartPress = () => {
-        setIsHeartFilled((prev) => !prev);
-    };
-
     const handleButtonPress = (button) => {
         setFocusedButton(button);
     };
+
+    const loadHeartStatus = async () => {
+        try {
+            const key = `liked_community_${postId}`;
+            const saved = await AsyncStorage.getItem(key);
+            setIsHeartFilled(saved === 'true');
+        } catch (e) {
+            console.error('좋아요 상태 불러오기 실패:', e);
+        }
+    };
+
+    const handleHeartPress = async () => {
+        try {
+            const newState = !isHeartFilled;
+            setIsHeartFilled(newState);
+
+            const key = `liked_community_${postId}`;
+            if (newState) {
+                await AsyncStorage.setItem(key, 'true');
+            } else {
+                await AsyncStorage.removeItem(key);
+            }
+        } catch (e) {
+            console.error('좋아요 상태 저장 실패:', e);
+        }
+    };
+
+    const loadJoinStatus = async () => {
+        try {
+            const key = `joined_community_${postId}`;
+            const saved = await AsyncStorage.getItem(key);
+            if (saved === 'true') setIsJoined(true);
+        } catch (e) {
+            console.error('참가 상태 불러오기 실패:', e);
+        }
+    };
+
+    const handleJoinToggle = async () => {
+        try {
+            const key = `joined_community_${postId}`;
+            if (isJoined) {
+                await AsyncStorage.removeItem(key); // 참가 취소
+                setIsJoined(false);
+
+                setPost(prev => ({
+                    ...prev,
+                    currentParticipants: Math.max(prev.currentParticipants - 1, 0),
+                }));
+            } else {
+                await AsyncStorage.setItem(key, 'true'); // 참가
+                setIsJoined(true);
+
+                setPost(prev => ({
+                    ...prev,
+                    currentParticipants: prev.currentParticipants + 1,
+                }));
+            }
+        } catch (e) {
+            console.error('참가 토글 실패:', e);
+        }
+    };
+
 
     const formatDateTime = (isoStr) => {
         if (!isoStr) return '-';
@@ -113,7 +172,7 @@ export default function CommuDetailPage({ navigation, route }) {
                                 <Text style={styles.peopleFont}>
                                     {post.currentParticipants} / {post.maxParticipants}
                                 </Text>
-                                <Text style={styles.regionFont}>{post.region}</Text>
+                                <Text style={styles.regionFont}>{getKoreanRegion(post.region)}</Text>
                             </View>
 
                             <View style={{ flexDirection: 'row', marginBottom: 4 }}>
@@ -166,10 +225,14 @@ export default function CommuDetailPage({ navigation, route }) {
                             <Text style={{ fontSize: 11, color: 'gray' }}>신고하기</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.btn2}>
-                            <Text style={{ fontSize: 11, fontWeight: 'bold', color: 'white' }}>참가하기</Text>
+                        <TouchableOpacity
+                            style={[styles.btn2, { backgroundColor: isJoined ? '#67574D' : '#67574D' }]}
+                            onPress={handleJoinToggle}
+                        >
+                            <Text style={{ fontSize: 11, fontWeight: 'bold', color: 'white' }}>
+                                {isJoined ? '참가 취소' : '참가하기'}
+                            </Text>
                         </TouchableOpacity>
-
                         <TouchableOpacity style={styles.heartBtnView} onPress={handleHeartPress}>
                             <Image
                                 source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
