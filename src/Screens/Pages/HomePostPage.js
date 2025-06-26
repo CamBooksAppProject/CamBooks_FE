@@ -26,6 +26,7 @@ export default function HomePostPage({ navigation }) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [price, setPrice] = useState('');
+    const [contentLengthAlertShown, setContentLengthAlertShown] = useState(false);
 
     const toggleOption = (option) => {
         setSelectedOptions({
@@ -237,7 +238,16 @@ export default function HomePostPage({ navigation }) {
                             maxLength={500}
                             multiline
                             value={content}
-                            onChangeText={setContent}
+                            onChangeText={(text) => {
+                                if (text.length >= 500 && !contentLengthAlertShown) {
+                                    alert('내용은 500자까지만 입력할 수 있습니다.');
+                                    setContentLengthAlertShown(true);
+                                }
+                                if (text.length < 500 && contentLengthAlertShown) {
+                                    setContentLengthAlertShown(false);
+                                }
+                                setContent(text);
+                            }}
                         />
                     </View>
                 </ScrollView>

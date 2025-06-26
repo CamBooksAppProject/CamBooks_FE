@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function FreeBoardPostPage({ navigation }) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const [contentAlertShown, setContentAlertShown] = useState(false);
 
     const handlePost = async () => {
         if (!title.trim() || !content.trim()) {
@@ -95,8 +96,18 @@ export default function FreeBoardPostPage({ navigation }) {
                             maxLength={500}
                             multiline={true}
                             value={content}
-                            onChangeText={setContent}
+                            onChangeText={(text) => {
+                                if (text.length >= 500 && !contentAlertShown) {
+                                    Alert.alert('입력 제한', '내용은 500자까지만 입력할 수 있습니다.');
+                                    setContentAlertShown(true);
+                                }
+                                if (text.length < 500 && contentAlertShown) {
+                                    setContentAlertShown(false);
+                                }
+                                setContent(text);
+                            }}
                         />
+
                     </View>
                 </ScrollView>
             </View>
