@@ -7,6 +7,7 @@ import {
   View,
   SafeAreaView,
   Alert,
+  ScrollView,
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -81,6 +82,9 @@ export default function SignUpScreen() {
   const [passwordValidMessage, setPasswordValidMessage] = useState("");
   const [nameErrorMessage, setNameErrorMessage] = useState("");
 
+  const [nickname, setNickname] = useState("");
+  const [address, setAddress] = useState("");
+
   const validatePassword = (pw) => {
     const regex =
       /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/;
@@ -91,13 +95,43 @@ export default function SignUpScreen() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const checkIdDuplicate = () => {
-    if (userId.trim() === "" || userId === "test123") {
+  const checkIdDuplicate = async () => {
+    if (userId.trim() === "") {
       setIdChecked(false);
-      setIdCheckMessage("아이디가 중복되었습니다. 다시 확인해주세요.");
-    } else {
-      setIdChecked(true);
-      setIdCheckMessage("");
+      setIdCheckMessage("아이디를 입력해주세요.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "http://localhost:8080/cambooks/member/check-id",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ memberId: userId }),
+        }
+      );
+
+      if (response.status === 200) {
+        // 중복 없음 (사용 가능)
+        setIdChecked(true);
+        setIdCheckMessage("");
+        Alert.alert("사용 가능한 아이디입니다.");
+      } else if (response.status === 409) {
+        // 중복됨
+        setIdChecked(false);
+        setIdCheckMessage("이미 사용 중인 아이디입니다.");
+      } else {
+        // 기타 오류
+        setIdChecked(false);
+        setIdCheckMessage("아이디 확인 중 오류가 발생했습니다.");
+      }
+    } catch (error) {
+      setIdChecked(false);
+      setIdCheckMessage("서버와 통신 중 오류가 발생했습니다.");
+      console.error(error);
     }
   };
 
@@ -169,7 +203,10 @@ export default function SignUpScreen() {
           <Text style={styles.title}>준비가 되셨나요?</Text>
         </View>
 
-        <View style={styles.inputContainer}>
+        <ScrollView
+          style={styles.inputContainer}
+          keyboardShouldPersistTaps="handled"
+        >
           <TextInput
             style={[styles.input, { marginBottom: 15 }]}
             placeholder="이름을 입력해주세요."
@@ -187,6 +224,22 @@ export default function SignUpScreen() {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+          />
+
+          {/* nickname 입력창 추가 */}
+          <TextInput
+            style={[styles.input, { marginBottom: 15 }]}
+            placeholder="닉네임을 입력해주세요."
+            value={nickname}
+            onChangeText={setNickname}
+          />
+
+          {/* address 입력창 추가 */}
+          <TextInput
+            style={[styles.input, { marginBottom: 15 }]}
+            placeholder="주소를 입력해주세요."
+            value={address}
+            onChangeText={setAddress}
           />
 
           <DropDownPicker
@@ -284,79 +337,77 @@ export default function SignUpScreen() {
               {passwordMatchMessage}
             </Text>
           )}
-
-          <View style={styles.bottomContainer}>
-            <TouchableOpacity
-              style={[styles.mainButton, !canProceed && styles.disabledButton]}
-              onPress={async () => {
-                if (canProceed) {
-                  try {
-                    const response = await fetch(
-                      "http://localhost:8080/cambooks/member/create",
-                      {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                          name: name,
-                          email: email,
-                          memberId: userId,
-                          password: password,
-                          universityId: universityValue,
-                        }),
-                      }
-                    );
-
-                    const responseText = await response.text();
-
-                    if (response.ok) {
-                      console.log("회원가입 성공:", responseText);
-                      Alert.alert(
-                        "회원가입 완료",
-                        `${responseText}님, 환영합니다!`,
-                        [
-                          {
-                            text: "확인",
-                            onPress: () => navigation.navigate("LoginScreen"),
-                          },
-                        ]
-                      );
-                    } else {
-                      console.log(
-                        "회원가입 실패, 상태 코드:",
-                        response.status,
-                        "응답:",
-                        responseText
-                      );
-                      if (response.status === 401) {
-                        Alert.alert(
-                          "회원가입 실패",
-                          "이미 가입된 이메일입니다."
-                        );
-                      } else if (response.status === 409) {
-                        Alert.alert("회원가입 실패", "중복된 정보가 있습니다.");
-                      } else {
-                        Alert.alert(
-                          "회원가입 실패",
-                          `서버 응답: ${responseText}`
-                        );
-                      }
+        </ScrollView>
+        <View style={styles.bottomContainer}>
+          <TouchableOpacity
+            style={[styles.mainButton, !canProceed && styles.disabledButton]}
+            onPress={async () => {
+              if (canProceed) {
+                try {
+                  const response = await fetch(
+                    "http://localhost:8080/cambooks/member/create",
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        name: name,
+                        nickname: nickname,
+                        email: email,
+                        memberId: userId,
+                        password: password,
+                        universityId: universityValue,
+                        address: address,
+                      }),
                     }
-                  } catch (error) {
-                    console.error("회원가입 중 오류 발생:", error);
-                    Alert.alert("오류", "회원가입 중 문제가 발생했습니다.");
+                  );
+
+                  const responseText = await response.text();
+
+                  if (response.ok) {
+                    console.log("회원가입 성공:", responseText);
+                    Alert.alert(
+                      "회원가입 완료",
+                      `${responseText}님, 환영합니다!`,
+                      [
+                        {
+                          text: "확인",
+                          onPress: () => navigation.navigate("LoginScreen"),
+                        },
+                      ]
+                    );
+                  } else {
+                    console.log(
+                      "회원가입 실패, 상태 코드:",
+                      response.status,
+                      "응답:",
+                      responseText
+                    );
+                    if (response.status === 401) {
+                      Alert.alert("회원가입 실패", "이미 가입된 이메일입니다.");
+                    } else if (response.status === 409) {
+                      Alert.alert("회원가입 실패", "중복된 정보가 있습니다.");
+                    } else {
+                      Alert.alert(
+                        "회원가입 실패",
+                        `서버 응답: ${responseText}`
+                      );
+                    }
                   }
+                } catch (error) {
+                  console.error("회원가입 중 오류 발생:", error);
+                  Alert.alert("오류", "회원가입 중 문제가 발생했습니다.");
                 }
-              }}
-              disabled={!canProceed}
-            >
-              <Text style={styles.btnfont}>회원가입완료</Text>
-            </TouchableOpacity>
-          </View>
+              }
+            }}
+            disabled={!canProceed}
+          >
+            <Text style={styles.btnfont}>회원가입완료</Text>
+          </TouchableOpacity>
         </View>
-        <StatusBar style="auto" />
       </View>
+      <StatusBar style="auto" />
     </SafeAreaView>
   );
 }
