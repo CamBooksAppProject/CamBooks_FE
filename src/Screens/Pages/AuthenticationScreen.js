@@ -16,8 +16,10 @@ export default function AuthenticationScreen() {
   const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [inputCode, setInputCode] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [emailErrorMessage, setEmailErrorMessage] = useState("");
+  const [codeErrorMessage, setCodeErrorMessage] = useState("");
   const [isCodeConfirmed, setIsCodeConfirmed] = useState(false);
+  const [isSendDisabled, setIsSendDisabled] = useState(false);
 
   const isValidEmail = (email) => {
     const trimmed = email.trim();
@@ -26,13 +28,15 @@ export default function AuthenticationScreen() {
 
   const handleSendCode = async () => {
     if (!isValidEmail(email)) {
-      setErrorMessage(
+      setEmailErrorMessage(
         "학교 이메일 형식을 확인해주세요. '.ac.kr'로 끝나야 합니다."
       );
       return;
     }
 
     try {
+      setIsSendDisabled(true); // 버튼 비활성화
+
       const response = await fetch(
         `http://localhost:8080/cambooks/email/send-code?email=${encodeURIComponent(
           email
@@ -46,13 +50,15 @@ export default function AuthenticationScreen() {
 
       if (response.ok && text.includes("인증 코드가 전송되었습니다")) {
         Alert.alert("📩", "인증번호가 이메일로 전송되었습니다.");
-        setErrorMessage("");
+        setEmailErrorMessage("");
       } else {
-        setErrorMessage(`전송 실패: ${text}`);
+        setEmailErrorMessage(`전송 실패: ${text}`);
+        setIsSendDisabled(false); // 실패 시 다시 활성화
       }
     } catch (error) {
       console.error(error);
-      setErrorMessage("서버 오류가 발생했습니다. 다시 시도해주세요.");
+      setEmailErrorMessage("서버 오류가 발생했습니다. 다시 시도해주세요.");
+      setIsSendDisabled(false);
     }
   };
 
@@ -70,20 +76,22 @@ export default function AuthenticationScreen() {
       const text = await response.text();
       if (response.ok && text === "인증 성공") {
         setIsCodeConfirmed(true);
-        setErrorMessage("");
+        setCodeErrorMessage("");
         Alert.alert("이메일 인증 성공", "이메일 인증에 성공했습니다.");
       } else {
         setIsCodeConfirmed(false);
-        setErrorMessage("인증번호가 일치하지 않습니다.");
+        setCodeErrorMessage("인증번호가 일치하지 않습니다.");
+        setIsSendDisabled(false); // 인증 실패 시 다시 전송 버튼 활성화
       }
     } catch (error) {
       console.error(error);
-      setErrorMessage("서버 오류가 발생했습니다. 다시 시도해주세요.");
+      setCodeErrorMessage("서버 오류가 발생했습니다. 다시 시도해주세요.");
+      setIsSendDisabled(false);
     }
   };
 
   const handleCompleteSignup = () => {
-    navigation.navigate("SignUpScreen");
+    navigation.navigate("SignUpScreen", { email });
   };
 
   return (
@@ -108,18 +116,27 @@ export default function AuthenticationScreen() {
             value={email}
             onChangeText={(text) => {
               setEmail(text);
-              setErrorMessage("");
+              setEmailErrorMessage("");
               setIsCodeConfirmed(false);
             }}
             keyboardType="email-address"
             autoCapitalize="none"
           />
 
-          {errorMessage !== "" && (
-            <Text style={styles.errorText}>{errorMessage}</Text>
+          {emailErrorMessage !== "" && (
+            <Text style={styles.errorText}>{emailErrorMessage}</Text>
           )}
 
-          <TouchableOpacity style={styles.mainbtn} onPress={handleSendCode}>
+          <TouchableOpacity
+            style={[
+              styles.mainbtn,
+              isSendDisabled
+                ? { backgroundColor: "#BEBEBE" }
+                : { backgroundColor: "#67574D" },
+            ]}
+            onPress={handleSendCode}
+            disabled={isSendDisabled}
+          >
             <Text style={styles.btnfont}>인증번호 전송</Text>
           </TouchableOpacity>
 
@@ -130,7 +147,7 @@ export default function AuthenticationScreen() {
               value={inputCode}
               onChangeText={(text) => {
                 setInputCode(text);
-                setErrorMessage("");
+                setCodeErrorMessage("");
                 setIsCodeConfirmed(false);
               }}
               keyboardType="number-pad"
@@ -148,6 +165,10 @@ export default function AuthenticationScreen() {
               <Text style={styles.btnfont}>확인</Text>
             </TouchableOpacity>
           </View>
+
+          {codeErrorMessage !== "" && (
+            <Text style={styles.errorText}>{codeErrorMessage}</Text>
+          )}
 
           <TouchableOpacity
             style={[
@@ -207,7 +228,7 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 40,
+    marginVertical: 10,
   },
   ckInput: {
     backgroundColor: "#F7F7F7",
@@ -217,7 +238,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   mainbtn: {
-    backgroundColor: "#67574D",
     width: "100%",
     marginVertical: 15,
     paddingVertical: 14,
