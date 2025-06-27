@@ -8,18 +8,68 @@ import {
   SafeAreaView,
   Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useEffect } from "react";
+import DropDownPicker from "react-native-dropdown-picker";
+import { useNavigation } from "@react-navigation/native";
+
+const universityList = [
+  { id: 1, name: "서울대학교" },
+  { id: 2, name: "강남대학교" },
+  { id: 3, name: "고려대학교" },
+  { id: 4, name: "연세대학교" },
+  { id: 5, name: "성균관대학교" },
+  { id: 6, name: "한국외국어대학교" },
+  { id: 7, name: "한양대학교" },
+  { id: 8, name: "중앙대학교" },
+  { id: 9, name: "경희대학교" },
+  { id: 10, name: "이화여자대학교" },
+  { id: 11, name: "동국대학교" },
+  { id: 12, name: "인천대학교" },
+  { id: 13, name: "서울시립대학교" },
+  { id: 14, name: "서강대학교" },
+  { id: 15, name: "포항공과대학교" },
+  { id: 16, name: "한국과학기술원" },
+  { id: 17, name: "광주과학기술원" },
+  { id: 18, name: "울산과학기술원" },
+  { id: 19, name: "경북대학교" },
+  { id: 20, name: "부산대학교" },
+  { id: 21, name: "경상국립대학교" },
+  { id: 22, name: "충북대학교" },
+  { id: 23, name: "전북대학교" },
+  { id: 24, name: "충남대학교" },
+  { id: 25, name: "전남대학교" },
+  { id: 26, name: "중앙대학교" },
+  { id: 27, name: "국민대학교" },
+  { id: 28, name: "명지대학교" },
+  { id: 29, name: "서울과학기술대학교" },
+  { id: 30, name: "세종대학교" },
+  { id: 31, name: "한국기술교육대학교" },
+  { id: 32, name: "한국예술종합학교" },
+];
+
+const universityItems = universityList.map((u) => ({
+  label: u.name,
+  value: u.id,
+}));
 
 export default function SignUpScreen() {
+  const route = useRoute();
   const navigation = useNavigation();
-
+  const [email, setEmail] = useState(route.params?.email || "");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [universityOpen, setUniversityOpen] = useState(false);
+  const [universityValue, setUniversityValue] = useState(
+    universityItems.length > 0 ? universityItems[0].value : null
+  );
+  const [universityItemsState, setUniversityItemsState] =
+    useState(universityItems);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -121,7 +171,7 @@ export default function SignUpScreen() {
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { marginBottom: 15 }]}
             placeholder="이름을 입력해주세요."
             value={name}
             onChangeText={setName}
@@ -131,7 +181,7 @@ export default function SignUpScreen() {
           )}
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { marginBottom: 15 }]}
             placeholder="학교 이메일을 입력해주세요."
             value={email}
             onChangeText={setEmail}
@@ -139,7 +189,23 @@ export default function SignUpScreen() {
             keyboardType="email-address"
           />
 
-          <View style={styles.idRow}>
+          <DropDownPicker
+            open={universityOpen}
+            value={universityValue}
+            items={universityItemsState}
+            setOpen={setUniversityOpen}
+            setValue={setUniversityValue}
+            setItems={setUniversityItemsState}
+            style={[styles.dropdown, { marginBottom: 15 }]}
+            dropDownContainerStyle={styles.dropdownContainer}
+            listMode="MODAL"
+            modalTitle="대학교 선택"
+            modalProps={{
+              animationType: "slide",
+            }}
+          />
+
+          <View style={[styles.idRow, { marginBottom: 15 }]}>
             <TextInput
               style={styles.idInput}
               placeholder="아이디를 입력해주세요."
@@ -164,7 +230,7 @@ export default function SignUpScreen() {
             <Text style={styles.errorText}>{idCheckMessage}</Text>
           )}
 
-          <View style={styles.passwordRow}>
+          <View style={[styles.passwordRow, { marginBottom: 15 }]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="비밀번호를 입력해주세요."
@@ -177,9 +243,9 @@ export default function SignUpScreen() {
               style={styles.eyeIcon}
             >
               <Ionicons
-                name={showPassword ? "eye-off" : "eye"}
-                size={20}
-                color="#888"
+                name={showPassword ? "eye" : "eye-off"}
+                size={24}
+                color="gray"
               />
             </TouchableOpacity>
           </View>
@@ -187,7 +253,7 @@ export default function SignUpScreen() {
             <Text style={styles.errorText}>{passwordValidMessage}</Text>
           )}
 
-          <View style={styles.passwordRow}>
+          <View style={[styles.passwordRow, { marginBottom: 15 }]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="비밀번호를 다시 입력해주세요."
@@ -200,164 +266,203 @@ export default function SignUpScreen() {
               style={styles.eyeIcon}
             >
               <Ionicons
-                name={showConfirmPassword ? "eye-off" : "eye"}
-                size={20}
-                color="#888"
+                name={showConfirmPassword ? "eye" : "eye-off"}
+                size={24}
+                color="gray"
               />
             </TouchableOpacity>
           </View>
           {passwordMatchMessage !== "" && (
             <Text
-              style={
-                passwordMatchMessage.includes("일치하지")
-                  ? styles.errorText
-                  : styles.successText
-              }
+              style={[
+                styles.errorText,
+                passwordMatchMessage === "비밀번호가 일치합니다."
+                  ? { color: "green" }
+                  : { color: "red" },
+              ]}
             >
               {passwordMatchMessage}
             </Text>
           )}
-        </View>
 
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity
-            style={[styles.mainButton, !canProceed && styles.disabledButton]}
-            onPress={async () => {
-              if (canProceed) {
-                try {
-                  const response = await fetch(
-                    "http://localhost:8080/cambooks/member/create",
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        name: name,
-                        email: email,
-                        memberId: userId,
-                        password: password,
-                        universityId: 1,
-                      }),
-                    }
-                  );
-
-                  const responseText = await response.text();
-
-                  if (response.ok) {
-                    Alert.alert(
-                      "회원가입 완료",
-                      `${responseText}님, 환영합니다!`,
-                      [
-                        {
-                          text: "확인",
-                          onPress: () => navigation.navigate("LoginScreen"),
+          <View style={styles.bottomContainer}>
+            <TouchableOpacity
+              style={[styles.mainButton, !canProceed && styles.disabledButton]}
+              onPress={async () => {
+                if (canProceed) {
+                  try {
+                    const response = await fetch(
+                      "http://localhost:8080/cambooks/member/create",
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
                         },
-                      ]
+                        body: JSON.stringify({
+                          name: name,
+                          email: email,
+                          memberId: userId,
+                          password: password,
+                          universityId: universityValue,
+                        }),
+                      }
                     );
-                  } else {
-                    Alert.alert("회원가입 실패", `서버 응답: ${responseText}`);
+
+                    const responseText = await response.text();
+
+                    if (response.ok) {
+                      console.log("회원가입 성공:", responseText);
+                      Alert.alert(
+                        "회원가입 완료",
+                        `${responseText}님, 환영합니다!`,
+                        [
+                          {
+                            text: "확인",
+                            onPress: () => navigation.navigate("LoginScreen"),
+                          },
+                        ]
+                      );
+                    } else {
+                      console.log(
+                        "회원가입 실패, 상태 코드:",
+                        response.status,
+                        "응답:",
+                        responseText
+                      );
+                      if (response.status === 401) {
+                        Alert.alert(
+                          "회원가입 실패",
+                          "이미 가입된 이메일입니다."
+                        );
+                      } else if (response.status === 409) {
+                        Alert.alert("회원가입 실패", "중복된 정보가 있습니다.");
+                      } else {
+                        Alert.alert(
+                          "회원가입 실패",
+                          `서버 응답: ${responseText}`
+                        );
+                      }
+                    }
+                  } catch (error) {
+                    console.error("회원가입 중 오류 발생:", error);
+                    Alert.alert("오류", "회원가입 중 문제가 발생했습니다.");
                   }
-                } catch (error) {
-                  Alert.alert("오류", "회원가입 중 문제가 발생했습니다.");
-                  console.error(error);
                 }
-              }
-            }}
-            disabled={!canProceed}
-          >
-            <Text style={styles.btnfont}>회원가입완료</Text>
-          </TouchableOpacity>
+              }}
+              disabled={!canProceed}
+            >
+              <Text style={styles.btnfont}>회원가입완료</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        <StatusBar style="auto" />
       </View>
-      <StatusBar style="auto" />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#fff" },
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 40,
   },
-  backButton: { marginBottom: 20 },
-  titleContainer: { marginTop: 40, marginBottom: 80 },
-  title: { fontSize: 25, fontWeight: "bold", color: "#000" },
-  inputContainer: { width: "100%" },
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    marginTop: 20,
+  },
+  titleContainer: {
+    marginTop: 60,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#222",
+  },
+  inputContainer: {
+    marginTop: 30,
+  },
   input: {
-    backgroundColor: "#F7F7F7",
-    width: "100%",
     height: 48,
-    borderRadius: 5,
-    paddingHorizontal: 16,
-    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+  },
+  dropdown: {
+    borderColor: "#ddd",
+    borderRadius: 6,
+  },
+  dropdownContainer: {
+    borderColor: "#ddd",
+    borderRadius: 6,
   },
   idRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
   },
   idInput: {
     flex: 1,
-    backgroundColor: "#F7F7F7",
     height: 48,
-    borderRadius: 5,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 6,
+    paddingHorizontal: 10,
   },
   checkButton: {
     backgroundColor: "#67574D",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 5,
-    marginLeft: 10,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    borderRadius: 6,
+    marginLeft: 8,
   },
-  disabledButton: { backgroundColor: "#AAA" },
+  disabledButton: {
+    backgroundColor: "#888",
+  },
   btnfont: {
-    color: "#fff",
-    fontSize: 14,
+    color: "white",
     fontWeight: "bold",
   },
   passwordRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F7F7F7",
-    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 6,
     height: 48,
-    marginBottom: 8,
-    paddingHorizontal: 10,
   },
   passwordInput: {
     flex: 1,
+    height: 48,
     paddingHorizontal: 10,
   },
   eyeIcon: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+  },
+  signUpButton: {
+    backgroundColor: "#67574D",
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 6,
+    marginTop: 10,
   },
   errorText: {
     color: "red",
-    fontSize: 12,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  successText: {
-    color: "green",
-    fontSize: 12,
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 10,
   },
   bottomContainer: {
-    marginTop: 40,
-    marginBottom: 30,
+    marginTop: 20,
   },
   mainButton: {
     backgroundColor: "#67574D",
-    width: "100%",
-    paddingVertical: 14,
-    borderRadius: 5,
+    height: 48,
+    justifyContent: "center",
     alignItems: "center",
+    borderRadius: 6,
   },
 });
