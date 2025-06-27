@@ -31,7 +31,10 @@ export default function CommuPostPage({ navigation }) {
     const [recruitAlertShown, setRecruitAlertShown] = useState(false);
     const [introduceAlertShown, setIntroduceAlertShown] = useState(false);
 
-    const regions = ['서울', '경기', '인천', '전북'];
+    const regions = [
+        '서울', '부산', '대구', '인천', '광주', '대전', '울산',
+        '세종', '제주', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남',
+    ];
 
     const handleSelectPhoto = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -80,9 +83,22 @@ export default function CommuPostPage({ navigation }) {
 
             const regionMap = {
                 '서울': 'SEOUL',
-                '경기': 'GYEONGGI',
+                '부산': 'BUSAN',
+                '대구': 'DAEGU',
                 '인천': 'INCHEON',
+                '광주': 'GWANGJU',
+                '대전': 'DAEJEON',
+                '울산': 'ULSAN',
+                '세종': 'SEJONG',
+                '제주': 'JEJU',
+                '경기': 'GYEONGGI',
+                '강원': 'GANGWON',
+                '충북': 'CHUNGBUK',
+                '충남': 'CHUNGNAM',
                 '전북': 'JEONBUK',
+                '전남': 'JEONNAM',
+                '경북': 'GYEONGBUK',
+                '경남': 'GYEONGNAM',
             };
 
             const dto = {
