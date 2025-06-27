@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,32 +6,33 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import api from "../../api/axiosInstance";
 
 export default function SalesHistory() {
   const navigation = useNavigation();
+  const [salesItems, setSalesItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const purchasedItems = [
-    {
-      id: 1,
-      college: "OO대학교",
-      title: "자료구조 책",
-      price: "10,000원",
-      likes: 23,
-      views: 104,
-    },
-    {
-      id: 2,
-      college: "XX대학교",
-      title: "운영체제 정리노트",
-      price: "5,000원",
-      likes: 12,
-      views: 89,
-    },
-  ];
+  useEffect(() => {
+    const fetchSalesHistory = async () => {
+      try {
+        const res = await api.get("/mypage/sales");
+        setSalesItems(res.data);
+      } catch (err) {
+        console.error("판매 내역 가져오기 실패:", err);
+        Alert.alert("오류", "판매 내역을 불러오는 데 실패했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSalesHistory();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -50,30 +51,52 @@ export default function SalesHistory() {
         <View style={{ width: "15%" }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {purchasedItems.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.itemContainer}
-            onPress={() => navigation.navigate("HomeDetailPage", { item })}
-          >
-            <View style={styles.photo} />
-            <View style={{ flexDirection: "column", marginLeft: 10 }}>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={styles.collegeFont}>{item.college} </Text>
-                <Text style={styles.title}>{item.title}</Text>
-              </View>
-              <Text style={styles.priceFont}>{item.price}</Text>
-              <View style={styles.iconRow}>
-                <MaterialIcons name="favorite" size={16} color="#E57373" />
-                <Text style={styles.iconFont}>{item.likes}</Text>
-                <MaterialIcons name="remove-red-eye" size={16} color="#555" />
-                <Text style={styles.iconFont}>{item.views}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#999"
+          style={{ marginTop: 20 }}
+        />
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {salesItems.length === 0 ? (
+            <Text style={{ textAlign: "center", marginTop: 20 }}>
+              판매 내역이 없습니다.
+            </Text>
+          ) : (
+            salesItems.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.itemContainer}
+                onPress={() =>
+                  navigation.navigate("HomeDetailPage", { postId: item.id })
+                }
+              >
+                <View style={styles.photo} />
+                <View style={{ flexDirection: "column", marginLeft: 10 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text style={styles.collegeFont}>{item.university} </Text>
+                    <Text style={styles.title}>{item.title}</Text>
+                  </View>
+                  <Text style={styles.priceFont}>
+                    {item.price.toLocaleString()}원
+                  </Text>
+                  <View style={styles.iconRow}>
+                    <MaterialIcons name="favorite" size={16} color="#E57373" />
+                    <Text style={styles.iconFont}>{item.postLikeCount}</Text>
+                    <MaterialIcons
+                      name="remove-red-eye"
+                      size={16}
+                      color="#555"
+                    />
+                    <Text style={styles.iconFont}>{item.viewCount}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
