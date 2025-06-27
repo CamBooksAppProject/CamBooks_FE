@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
 import {
     StyleSheet,
     Text,
@@ -13,48 +14,50 @@ import {
 } from 'react-native-responsive-screen';
 import IMAGES from '../../../assets';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function FreeBoardScrapPage() {
+
+export default function FreeBoardPage() {
     const navigation = useNavigation();
-    const [posts, setPosts] = useState([
-        {
-            id: 1,
-            title: '노트북 추천좀',
-            content: '맥북이 좋을까요? 갤북이 좋을까요?',
-            author: '이몽룡',
-            time: '12:21',
-            likes: 4,
-            comments: 10,
-            isScrapped: true,
-        },
-        {
-            id: 2,
-            title: '시험 망함',
-            content: '다음 학기 수강신청 준비',
-            author: '이순신',
-            time: '09:12',
-            likes: 2,
-            comments: 5,
-            isScrapped: false,
-        },
-    ]);
+    const [items, setItems] = useState([]);
+    const BASE_URL = 'http://localhost:8080';
 
-    const filteredPosts = useMemo(() => {
-        return posts.filter(post => post.isScrapped === true);
-    }, [posts]);
 
-    useEffect(() => {
-        // fetchPosts();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchScrappedPosts();
+        }, [])
+    );
 
-    const fetchPosts = async () => {
+
+    const fetchScrappedPosts = async () => {
         try {
-            const res = await fetch('https://your.api.endpoint.com/freeboard');
-            const data = await res.json();
-            const filtered = data.filter((post) => post.isScrapped);
-            setPosts(filtered);
-        } catch (err) {
-            console.error('게시글 불러오기 실패:', err);
+            const token = await AsyncStorage.getItem('accessToken');
+            const likedRes = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
+            const likedData = await likedRes.json();
+            console.log("스크랩 데이터 전체:", likedData);
+
+            const likedPosts = likedData["GENERAL_FORUM"] || [];
+            console.log("좋아요 게시글 개수:", likedPosts.length);
+            console.log("좋아요 게시글 목록:", likedPosts);
+
+            // id 중복 체크 (경고 로그 출력)
+            const ids = likedPosts.map(post => post.id);
+            const uniqueIds = new Set(ids);
+            if (uniqueIds.size !== ids.length) {
+                console.warn("좋아요 게시글 id 중복 감지됨!");
+            }
+
+            setItems(likedPosts);
+        } catch (error) {
+            console.error("스크랩 게시글 불러오기 실패:", error);
         }
     };
 
@@ -65,20 +68,32 @@ export default function FreeBoardScrapPage() {
         >
             <View style={{ flexDirection: 'column' }}>
                 <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.contentsFont}>{item.content}</Text>
+                <Text style={styles.contentsFont} numberOfLines={2}>{item.content}</Text>
 
                 <View style={styles.infoRow}>
                     <View style={styles.userInfo}>
-                        <Image source={IMAGES.POSTPROFILE} resizeMode="contain" style={styles.profileIcon} />
-                        <Text style={styles.nameFont}>{item.author}</Text>
-                        <Text style={styles.timeFont}>{item.time}</Text>
+                        <Image
+                            source={IMAGES.POSTPROFILE}
+                            resizeMode="contain"
+                            style={styles.profileIcon}
+                        />
+                        <Text style={styles.nameFont}>{item.writerName}</Text>
+                        <Text style={styles.timeFont}>{item.createdAt?.split('T')[0]}</Text>
                     </View>
 
                     <View style={styles.statsRow}>
-                        <Image source={IMAGES.REDHEART} resizeMode="contain" style={styles.icon} />
-                        <Text style={styles.iconFont}>{item.likes}</Text>
-                        <Image source={IMAGES.COMMENT} resizeMode="contain" style={styles.icon} />
-                        <Text style={styles.iconFont}>{item.comments}</Text>
+                        <Image
+                            source={IMAGES.REDHEART}
+                            resizeMode="contain"
+                            style={styles.icon}
+                        />
+                        <Text style={styles.iconFont}>{item.postLikeCount ?? 0}</Text>
+                        <Image
+                            source={IMAGES.COMMENT}
+                            resizeMode="contain"
+                            style={styles.icon}
+                        />
+                        <Text style={styles.iconFont}>0</Text>
                     </View>
                 </View>
             </View>
@@ -88,12 +103,12 @@ export default function FreeBoardScrapPage() {
     return (
         <View style={styles.container}>
             <FlatList
-                data={filteredPosts}
+                data={items}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
-                contentContainerStyle={{ paddingBottom: hp(6) }}
+                contentContainerStyle={{ paddingBottom: hp(14) }}
                 ListEmptyComponent={
-                    <Text style={styles.emptyText}>스크랩한 자유게시글이 없습니다.</Text>
+                    <Text style={styles.emptyText}>데이터 없음</Text>
                 }
             />
         </View>
@@ -162,9 +177,9 @@ const styles = StyleSheet.create({
         marginHorizontal: wp(1.5),
     },
     emptyText: {
-        textAlign: 'center',
-        marginTop: hp(4),
-        fontSize: wp(3.5),
-        color: '#aaa',
+        alignSelf: 'center',
+        marginTop: hp(5),
+        fontSize: wp(4),
+        color: '#999',
     },
 });

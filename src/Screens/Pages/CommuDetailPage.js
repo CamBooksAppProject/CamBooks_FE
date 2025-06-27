@@ -5,7 +5,7 @@ import IMAGES from '../../../assets';
 
 export default function CommuDetailPage({ navigation, route }) {
     const { postId } = route.params;
-    const BASE_URL = 'http://192.168.0.19:8080';
+    const BASE_URL = 'http://localhost:8080';
 
     const [post, setPost] = useState(null);
     const [isHeartFilled, setIsHeartFilled] = useState(false);
@@ -67,17 +67,39 @@ export default function CommuDetailPage({ navigation, route }) {
 
     const handleHeartPress = async () => {
         try {
+            const key = `liked_community_${postId}`;
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
+
+            const res = await fetch(`${BASE_URL}/cambooks/post-likes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    postType: "COMMUNITY"
+                })
+            });
+
+            if (!res.ok) throw new Error("좋아요 토글 실패");
+
             const newState = !isHeartFilled;
+            console.log('좋아요 상태 토글, 이전:', isHeartFilled, '새로운:', newState);
+
             setIsHeartFilled(newState);
 
-            const key = `liked_community_${postId}`;
             if (newState) {
                 await AsyncStorage.setItem(key, 'true');
+                setPost(prev => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
             } else {
                 await AsyncStorage.removeItem(key);
+                setPost(prev => ({ ...prev, postLikeCount: Math.max(prev.postLikeCount - 1, 0) }));
             }
+
         } catch (e) {
-            console.error('좋아요 상태 저장 실패:', e);
+            console.error("좋아요 토글 실패:", e);
         }
     };
 
@@ -93,26 +115,48 @@ export default function CommuDetailPage({ navigation, route }) {
 
     const handleJoinToggle = async () => {
         try {
-            const key = `joined_community_${postId}`;
-            if (isJoined) {
-                await AsyncStorage.removeItem(key); // 참가 취소
-                setIsJoined(false);
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error('로그인이 필요합니다.');
 
+            if (isJoined) {
+                // 참가 취소 API 호출
+                const response = await fetch(`${BASE_URL}/cambooks/community/leave/${postId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) throw new Error('참가 취소 실패');
+
+                await AsyncStorage.removeItem(`joined_community_${postId}`);
+                setIsJoined(false);
                 setPost(prev => ({
                     ...prev,
                     currentParticipants: Math.max(prev.currentParticipants - 1, 0),
                 }));
             } else {
-                await AsyncStorage.setItem(key, 'true'); // 참가
-                setIsJoined(true);
+                // 참가 API 호출
+                const response = await fetch(`${BASE_URL}/cambooks/community/join/${postId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
 
+                if (!response.ok) throw new Error('참가 요청 실패');
+
+                await AsyncStorage.setItem(`joined_community_${postId}`, 'true');
+                setIsJoined(true);
                 setPost(prev => ({
                     ...prev,
                     currentParticipants: prev.currentParticipants + 1,
                 }));
             }
-        } catch (e) {
-            console.error('참가 토글 실패:', e);
+        } catch (error) {
+            console.error('참가 토글 실패:', error);
         }
     };
 

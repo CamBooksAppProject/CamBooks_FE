@@ -99,6 +99,9 @@ export default function FreeBoardPage() {
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
                 contentContainerStyle={{ paddingBottom: hp(14) }}
+                ListEmptyComponent={
+                    <Text style={styles.emptyText}>데이터 없음</Text>
+                }
             />
 
             <TouchableOpacity
@@ -193,5 +196,11 @@ const styles = StyleSheet.create({
     plusIcon: {
         height: wp(6),
         width: wp(6),
+    },
+    emptyText: {
+        alignSelf: 'center',
+        marginTop: hp(5),
+        fontSize: wp(4),
+        color: '#999',
     },
 });
