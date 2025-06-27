@@ -21,6 +21,16 @@ export default function FreeBoardDetailPage({ route, navigation }) {
         loadHeartStatus();
     }, []);
 
+    const formatCreatedAt = (isoString) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${month}월 ${day}일 ${hours}:${minutes}`;
+    };
+
     const fetchPostDetail = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
@@ -40,8 +50,24 @@ export default function FreeBoardDetailPage({ route, navigation }) {
 
     const fetchComments = async () => {
         try {
-            const res = await fetch(`http://localhost:8080/cambooks/general-forum/${postId}/comments`);
-            const data = await res.json();
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`${BASE_URL}/cambooks/general-forum/comment?postId=${postId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+
+            if (!res.ok) throw new Error(`댓글 불러오기 실패: ${res.status}`);
+
+            const text = await res.text();
+
+            if (!text || text.trim() === "" || text.trim() === "null") {
+                setComments([]);
+                return;
+            }
+
+            const data = JSON.parse(text);
             setComments(data);
         } catch (err) {
             console.error('댓글 불러오기 실패:', err);
@@ -53,23 +79,31 @@ export default function FreeBoardDetailPage({ route, navigation }) {
 
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:8080/cambooks/general-forum/${postId}/comments`, {
+            const res = await fetch(`${BASE_URL}/cambooks/general-forum/comment`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(token && { Authorization: `Bearer ${token}` }),
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ content: commentText.trim() })
+                body: JSON.stringify({
+                    postId: postId,
+                    comment: commentText.trim(),
+                }),
             });
 
             if (!res.ok) throw new Error('댓글 등록 실패');
+
             setCommentText('');
-            fetchComments(); // 등록 후 새로 불러오기
+            await fetchComments();
         } catch (err) {
             console.error(err);
             Alert.alert('오류', '댓글 작성 중 문제가 발생했습니다.');
         }
     };
+
+
+
+
 
     const loadHeartStatus = async () => {
         try {
@@ -142,7 +176,7 @@ export default function FreeBoardDetailPage({ route, navigation }) {
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Image source={IMAGES.POSTPROFILE} style={{ height: 25, width: 25 }} />
                             <Text style={styles.nameFont}>{post.writerName}</Text>
-                            <Text style={styles.timeFont}>{post.createdAt?.slice(0, 10)}</Text>
+                            <Text style={styles.timeFont}>{post.createdAt?.slice(0, 10) ?? ''}</Text>
                         </View>
 
                         <Text style={styles.titleFont}>{post.title}</Text>
@@ -161,22 +195,43 @@ export default function FreeBoardDetailPage({ route, navigation }) {
 
                     <View style={styles.line} />
 
-                    {/* 댓글 목록 */}
-                    <View style={{ paddingHorizontal: 15 }}>
-                        {comments.map((comment, idx) => (
-                            <View key={idx} style={styles.commentView}>
-                                <Image source={IMAGES.POSTPROFILE} style={{ height: 20, width: 20 }} />
-                                <Text style={styles.commentName}>{comment.writerName}</Text>
-                                <Text style={styles.commentFont}>{comment.content}</Text>
-                            </View>
-                        ))}
+
+                    <View>
+                        {comments.length > 0 ? (
+                            comments.map((comment, idx) => {
+                                const createdAtFormatted = formatCreatedAt(comment.createdAt);
+
+                                return (
+                                    <View key={idx} style={styles.commentView}>
+
+                                        <View style={styles.commentLeft}>
+                                            <Image source={IMAGES.POSTPROFILE} style={styles.commentProfile} />
+                                            <Text style={styles.commentName}>{comment?.name ?? '익명'}</Text>
+                                        </View>
+
+
+                                        <View style={styles.commentMiddle}>
+                                            <Text style={styles.commentFont}>{comment?.content ?? ''}</Text>
+                                        </View>
+
+                                        <View style={styles.commentRight}>
+                                            <Text style={styles.commentTime}>{createdAtFormatted}</Text>
+                                        </View>
+                                    </View>
+                                );
+                            })
+                        ) : (
+                            <Text style={{ textAlign: 'center', color: 'gray', marginTop: 10 }}>댓글이 없습니다.</Text>
+                        )}
+
+
                     </View>
 
-                    <View style={{ height: 80 }} /> {/* 하단 입력창 가리기 방지 */}
+
+                    <View style={{ height: 80 }} />
                 </ScrollView>
             </View>
 
-            {/* 댓글 입력창 */}
             <View style={styles.bottomView}>
                 <View style={styles.inputView}>
                     <TextInput
@@ -267,26 +322,52 @@ const styles = StyleSheet.create({
         borderBottomColor: 'gray',
     },
     commentView: {
-        margin: 1,
-        width: '85%',
-        height: 45,
-        alignSelf: 'center',
         flexDirection: 'row',
         backgroundColor: '#F9F9F9',
-        alignItems: 'center'
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginVertical: 6,
+        borderRadius: 8,
+        alignItems: 'center',
+        width: '95%',
+        alignSelf: 'center',
+    },
+    commentLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 3,
+    },
+    commentProfile: {
+        width: 20,
+        height: 20,
+        borderRadius: 15,
+        marginRight: 8,
     },
     commentName: {
-        fontSize: 15,
+        fontSize: 12,
         fontWeight: 'bold',
-        color: 'gray',
-        marginLeft: 10,
+        color: '#333',
+    },
+    commentMiddle: {
+        flex: 5,
+        justifyContent: 'center',
+        paddingHorizontal: 10,
     },
     commentFont: {
         fontSize: 14,
-        color: 'gray',
-        marginLeft: 20,
-
+        color: '#555',
+        lineHeight: 20,
     },
+    commentRight: {
+        flex: 2,
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+    },
+    commentTime: {
+        fontSize: 12,
+        color: 'gray',
+    },
+
     goodFont: {
         marginLeft: 5,
         fontSize: 11,
@@ -305,6 +386,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderTopLeftRadius: 10,
         borderBottomLeftRadius: 10,
+        paddingHorizontal: 10,
+        textAlignVertical: 'center',
     },
     sendBtnView: {
         backgroundColor: '#67574D',
