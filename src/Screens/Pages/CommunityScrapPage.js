@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
@@ -13,79 +13,95 @@ import {
 } from 'react-native-responsive-screen';
 import IMAGES from '../../../assets';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
-export default function CommunityScrapPage() {
+export default function CommunScreen() {
     const navigation = useNavigation();
+    const [items, setItems] = useState([]);
+    const BASE_URL = 'http://localhost:8080';
 
-    const [posts, setPosts] = useState([
-        {
-            id: 1,
-            title: 'LG 부트캠프 모집',
-            content: '소프트웨어 인재를 양성할 목적으로 설립한 교육기관...',
-            peopleCount: 9,
-            isScrapped: true,
-        },
-        {
-            id: 2,
-            title: '스크랩 안 된 글',
-            content: '이건 보이지 않아야 함',
-            peopleCount: 5,
-            isScrapped: false,
-        },
-    ]);
+    useFocusEffect(
+        useCallback(() => {
+            fetchScrappedPosts();
+        }, [])
+    );
 
-    const filteredPosts = useMemo(() => {
-        return posts.filter(post => post.isScrapped === true);
-    }, [posts]);
-
-    useEffect(() => {
-        // fetchData();
-    }, []);
-
-    const fetchData = async () => {
+    const fetchScrappedPosts = async () => {
         try {
-            const response = await fetch('https://your.api.endpoint.com/community');
-            const data = await response.json();
+            const token = await AsyncStorage.getItem('accessToken');
+            const likedRes = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
 
-            const scrappedPosts = data.filter(item => item.isScrapped);
-            setPosts(scrappedPosts);
+            const likedData = await likedRes.json();
+            console.log("스크랩 데이터 전체:", likedData);
+
+            const likedPosts = likedData["COMMUNITY"] || [];
+            console.log("좋아요 게시글 개수:", likedPosts.length);
+            console.log("좋아요 게시글 목록:", likedPosts);
+
+            // id 중복 체크 (경고 로그 출력)
+            const ids = likedPosts.map(post => post.id);
+            const uniqueIds = new Set(ids);
+            if (uniqueIds.size !== ids.length) {
+                console.warn("좋아요 게시글 id 중복 감지됨!");
+            }
+
+            setItems(likedPosts);
         } catch (error) {
-            console.error('API 호출 실패:', error);
+            console.error("스크랩 게시글 불러오기 실패:", error);
         }
     };
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.listView}
-            onPress={() => navigation.navigate('CommuDetailPage')}
-        >
-            <View style={{ flexDirection: 'column' }}>
-                <View style={{ flexDirection: 'row' }}>
-                    <View style={styles.photo}></View>
-                    <Image
-                        source={IMAGES.REDHEART}
-                        resizeMode='contain'
-                        style={styles.heartIcon}
-                    />
+
+    const renderItem = ({ item }) => {
+        const heartImage = item.isLiked ? IMAGES.REDHEART : IMAGES.EMPTYHEART;
+
+        return (
+            <TouchableOpacity
+                style={styles.listView}
+                onPress={() => navigation.navigate('CommuDetailPage', { postId: item.id })}
+            >
+                <View style={{ flexDirection: 'column' }}>
+                    <View style={{ flexDirection: 'row' }}>
+                        {item.thumbnailUrl ? (
+                            <Image
+                                source={{ uri: `${BASE_URL}${item.thumbnailUrl}` }}
+                                style={styles.photo}
+                            />
+                        ) : (
+                            <View style={styles.photo} />
+                        )}
+                        <Image
+                            source={heartImage}
+                            resizeMode="contain"
+                            style={styles.heartIcon}
+                        />
+                    </View>
+                    <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+                        {item.title}
+                    </Text>
+                    <Text style={styles.contentsFont} numberOfLines={2} ellipsizeMode="tail">
+                        {item.recruitment}
+                    </Text>
+                    <View style={styles.peopleRow}>
+                        <Image source={IMAGES.PEOPLE} resizeMode="contain" style={styles.peopleIcon} />
+                        <Text style={styles.iconFont}>{item.currentParticipants}</Text>
+                    </View>
                 </View>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.contentsFont}>{item.content}</Text>
-                <View style={styles.peopleRow}>
-                    <Image
-                        source={IMAGES.PEOPLE}
-                        resizeMode='contain'
-                        style={styles.peopleIcon}
-                    />
-                    <Text style={styles.iconFont}>{item.peopleCount}</Text>
-                </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <View style={styles.container}>
             <FlatList
-                data={filteredPosts}
+                data={items}
                 numColumns={2}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
@@ -96,7 +112,7 @@ export default function CommunityScrapPage() {
                     paddingTop: hp(2),
                 }}
                 ListEmptyComponent={
-                    <Text style={styles.emptyText}>스크랩한 글이 없습니다.</Text>
+                    <Text style={styles.emptyText}>데이터 없음</Text>
                 }
             />
         </View>
@@ -124,6 +140,7 @@ const styles = StyleSheet.create({
         borderColor: '#D0D1D1',
         borderWidth: 1,
         borderRadius: 5,
+        backgroundColor: '#F0F0F0',
     },
     heartIcon: {
         height: wp(5),
@@ -135,13 +152,14 @@ const styles = StyleSheet.create({
         fontSize: wp(3.5),
         fontWeight: 'bold',
         marginLeft: wp(4),
+        marginTop: hp(0.5),
     },
     contentsFont: {
         width: wp(32),
         fontSize: wp(2.5),
         color: '#515a5a',
         marginLeft: wp(4),
-        marginTop: hp(1),
+        marginTop: hp(0.5),
     },
     iconFont: {
         fontSize: wp(2.8),

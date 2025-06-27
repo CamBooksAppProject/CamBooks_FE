@@ -19,8 +19,36 @@ import { useFocusEffect } from '@react-navigation/native';
 export default function CommunScreen() {
     const navigation = useNavigation();
     const [posts, setPosts] = useState([]);
+    const regions = ['전체', '서울', '경기', '인천', '전북'];
+    const [selectedRegion, setSelectedRegion] = useState('전체');
+    const [filteredPosts, setFilteredPosts] = useState([]);
     const BASE_URL = 'http://localhost:8080';
 
+    const regionMap = {
+        '전체': null,
+        '서울': 'SEOUL',
+        '경기': 'GYEONGGI',
+        '인천': 'INCHEON',
+        '전북': 'JEONBUK',
+    };
+
+    useEffect(() => {
+        if (selectedRegion === '전체') {
+            setFilteredPosts(posts);
+        } else {
+            const regionCode = regionMap[selectedRegion];
+            const filtered = posts.filter(post => post.region === regionCode);
+            setFilteredPosts(filtered);
+        }
+    }, [selectedRegion, posts]);
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = ('0' + (date.getMonth() + 1)).slice(-2);
+        const day = ('0' + date.getDate()).slice(-2);
+        return `${year}.${month}.${day}`;
+    };
 
 
     const fetchData = async () => {
@@ -57,6 +85,7 @@ export default function CommunScreen() {
                 isLiked: likedPostIds.includes(post.id),
             }));
 
+            console.log("커뮤니티 데이터 전체:", merged);
             setPosts(merged);
         } catch (error) {
             console.error("API 통신 오류:", error);
@@ -105,6 +134,7 @@ export default function CommunScreen() {
                     <View style={styles.peopleRow}>
                         <Image source={IMAGES.PEOPLE} resizeMode="contain" style={styles.peopleIcon} />
                         <Text style={styles.iconFont}>{item.currentParticipants}</Text>
+                        <Text style={styles.dateFont}>{formatDate(item.createdAt)}</Text>
                     </View>
                 </View>
             </TouchableOpacity>
@@ -112,9 +142,37 @@ export default function CommunScreen() {
     };
 
     return (
+
         <View style={styles.container}>
+            <View style={{ height: hp(3), paddingHorizontal: wp(5.5), marginTop: hp(1) }}>
+                <FlatList
+                    data={regions}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={(item) => item}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            onPress={() => setSelectedRegion(item)}
+                            style={[
+                                styles.regionButton,
+                                selectedRegion === item && styles.regionButtonSelected,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.regionText,
+                                    selectedRegion === item && styles.regionTextSelected,
+                                ]}
+                            >
+                                {item}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                />
+            </View>
+
             <FlatList
-                data={posts}
+                data={filteredPosts}  // 필터링된 데이터 사용
                 numColumns={2}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
@@ -128,6 +186,7 @@ export default function CommunScreen() {
                     <Text style={styles.emptyText}>데이터 없음</Text>
                 }
             />
+
             <TouchableOpacity
                 style={styles.additBtn}
                 onPress={() => navigation.navigate('CommuPostPage')}
@@ -147,6 +206,30 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#FFFFFF',
     },
+    regionButton: {
+        width: wp(15),
+        height: hp(3),
+        borderRadius: 10,
+        borderWidth: 0.5,
+        borderColor: '#ccc',
+        marginRight: wp(3),
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    regionButtonSelected: {
+        backgroundColor: '#555',
+    },
+
+    regionText: {
+        fontSize: wp(3.5),
+        color: '#555',
+    },
+
+    regionTextSelected: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+
     listView: {
         width: wp(42),
         height: hp(21),
@@ -198,6 +281,11 @@ const styles = StyleSheet.create({
     peopleIcon: {
         height: wp(3),
         width: wp(3),
+    },
+    dateFont: {
+        fontSize: wp(2.6),
+        color: '#7f8c8d',
+        marginLeft: wp(2),
     },
     additBtn: {
         alignItems: 'center',

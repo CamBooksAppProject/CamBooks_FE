@@ -14,11 +14,20 @@ import {
 import IMAGES from "../../../assets";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [items, setItems] = useState([]);
   const BASE_URL = 'http://localhost:8080';
+
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   useEffect(() => {
     fetchData();
@@ -98,6 +107,9 @@ export default function HomeScreen() {
         data={items}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>데이터 없음</Text>
+        }
       />
       <TouchableOpacity
         style={styles.additBtn}
@@ -199,5 +211,11 @@ const styles = StyleSheet.create({
   plusIcon: {
     height: wp(6),
     width: wp(6),
+  },
+  emptyText: {
+    alignSelf: 'center',
+    marginTop: hp(5),
+    fontSize: wp(4),
+    color: '#999',
   },
 });

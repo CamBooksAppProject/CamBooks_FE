@@ -12,6 +12,8 @@ export default function FreeBoardDetailPage({ route, navigation }) {
     const [comments, setComments] = useState([]);
     const [commentText, setCommentText] = useState('');
     const [isHeartFilled, setIsHeartFilled] = useState(false);
+    const BASE_URL = 'http://localhost:8080';
+
 
     useEffect(() => {
         fetchPostDetail();
@@ -81,17 +83,39 @@ export default function FreeBoardDetailPage({ route, navigation }) {
 
     const handleHeartPress = async () => {
         try {
+            const key = `liked_generalForum_${postId}`;
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
+
+            const res = await fetch(`${BASE_URL}/cambooks/post-likes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    postType: "GENERAL_FORUM"
+                })
+            });
+
+            if (!res.ok) throw new Error("좋아요 토글 실패");
+
             const newState = !isHeartFilled;
+            console.log('좋아요 상태 토글, 이전:', isHeartFilled, '새로운:', newState);
+
             setIsHeartFilled(newState);
 
-            const key = `liked_generalForum_${postId}`;
             if (newState) {
                 await AsyncStorage.setItem(key, 'true');
+                setPost(prev => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
             } else {
                 await AsyncStorage.removeItem(key);
+                setPost(prev => ({ ...prev, postLikeCount: Math.max(prev.postLikeCount - 1, 0) }));
             }
+
         } catch (e) {
-            console.error('좋아요 상태 저장 실패:', e);
+            console.error("좋아요 토글 실패:", e);
         }
     };
 

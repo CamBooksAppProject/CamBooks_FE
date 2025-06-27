@@ -17,7 +17,7 @@ export default function HomeDetailPage({ navigation, route }) {
     const { postId } = route.params;
     const [post, setPost] = useState(null);
     const [isHeartFilled, setIsHeartFilled] = useState(false);
-    const BASE_URL = 'http://192.168.0.19:8080';
+    const BASE_URL = 'http://localhost:8080';
 
     useEffect(() => {
         fetchPostDetail();
@@ -41,17 +41,19 @@ export default function HomeDetailPage({ navigation, route }) {
 
             const data = await response.json();
             console.log("post data:", data);
-            data.viewCount += 1;
+
             setPost(data);
         } catch (error) {
             console.error("상세 API 오류:", error);
         }
     };
 
+
     const loadHeartStatus = async () => {
         try {
             const key = `liked_usedTrade_${postId}`;
             const saved = await AsyncStorage.getItem(key);
+            console.log('좋아요 상태 불러오기:', saved);
             setIsHeartFilled(saved === 'true');
         } catch (e) {
             console.error('좋아요 상태 불러오기 실패:', e);
@@ -60,10 +62,28 @@ export default function HomeDetailPage({ navigation, route }) {
 
     const handleHeartPress = async () => {
         try {
+            const key = `liked_usedTrade_${postId}`;
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
+
+            const res = await fetch(`${BASE_URL}/cambooks/post-likes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    postType: "USED_TRADE"
+                })
+            });
+
+            if (!res.ok) throw new Error("좋아요 토글 실패");
+
             const newState = !isHeartFilled;
             setIsHeartFilled(newState);
 
-            const key = `liked_usedTrade_${postId}`;
+            // 2. AsyncStorage & 로컬 카운트 업데이트
             if (newState) {
                 await AsyncStorage.setItem(key, 'true');
                 setPost(prev => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
@@ -71,10 +91,31 @@ export default function HomeDetailPage({ navigation, route }) {
                 await AsyncStorage.removeItem(key);
                 setPost(prev => ({ ...prev, postLikeCount: Math.max(prev.postLikeCount - 1, 0) }));
             }
+
+            // 3. 좋아요 수 증가/감소 DB 반영
+            const countRes = await fetch(`${BASE_URL}/cambooks/post-likes/count`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    postType: "USED_TRADE"
+                })
+            });
+
+            if (!countRes.ok) {
+                console.warn("좋아요 수 증가/감소 실패:", countRes.status);
+            }
+
         } catch (e) {
-            console.error('좋아요 상태 저장 실패:', e);
+            console.error("좋아요 처리 실패:", e);
         }
     };
+
+
+
 
     if (!post) {
         return (
