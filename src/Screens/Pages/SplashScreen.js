@@ -4,7 +4,7 @@ import IMAGES from "../../../assets";
 export default function SplashScreen() {
   return (
     <View style={styles.container}>
-      <Image source={IMAGES.SWAPLOGOV2} style={styles.image} />
+      <Image source={IMAGES.LOGO} style={styles.image} />
       {/* <Text style={styles.title}>스왑</Text> */}
     </View>
   );
