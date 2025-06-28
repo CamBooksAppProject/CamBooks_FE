@@ -17,6 +17,7 @@ export default function MyPost() {
   const [activeTab, setActiveTab] = useState(0);
   const [communityPosts, setCommunityPosts] = useState([]);
   const [freeBoardPosts, setFreeBoardPosts] = useState([]);
+  const [comments, setComments] = useState([]); // 댓글 상태
 
   const tabs = [
     { id: 0, title: "커뮤니티" },
@@ -48,14 +49,25 @@ export default function MyPost() {
       }
     };
 
+    const fetchComments = async () => {
+      try {
+        const res = await api.get("/general-forum/comment/my");
+        const transformed = res.data.map((comment) => ({
+          id: comment.id.toString(),
+          content: comment.content,
+          date: comment.createdAt.slice(0, 10),
+          postId: comment.postId,
+        }));
+        setComments(transformed);
+      } catch (error) {
+        console.error("댓글 불러오기 실패:", error);
+      }
+    };
+
     fetchCommunityPosts();
     fetchFreeBoardPosts();
+    fetchComments();
   }, []);
-
-  const comments = [
-    { id: "cm1", content: "댓글 내용 1", date: "2025-06-11" },
-    { id: "cm2", content: "댓글 내용 2", date: "2025-06-10" },
-  ];
 
   const getDataByTab = () => {
     if (activeTab === 0) return communityPosts;
@@ -70,7 +82,7 @@ export default function MyPost() {
     } else if (activeTab === 1) {
       navigation.navigate("FreeBoardDetailPage", { postId: item.id });
     } else if (activeTab === 2) {
-      navigation.navigate("FreeBoardDetailPage", { postId: item.id }); // 댓글도 자유게시판 글로 연결
+      navigation.navigate("FreeBoardDetailPage", { postId: item.postId });
     }
   };
 
@@ -135,8 +147,17 @@ export default function MyPost() {
         data={getDataByTab()}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10 }}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 10,
+          flexGrow: 1,
+        }}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>게시글이 없습니다.</Text>
+          </View>
+        }
       />
 
       <StatusBar style="auto" />
@@ -225,5 +246,15 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     color: "#888",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "top",
+    alignItems: "center",
+    marginTop: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#999",
   },
 });
