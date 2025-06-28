@@ -8,6 +8,7 @@ import {
   Image,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Switch } from "react-native-gesture-handler";
@@ -57,6 +58,41 @@ export default function SettingPage() {
     } catch (error) {
       console.error("로그아웃 실패:", error);
     }
+  };
+
+  const handleWithdraw = async () => {
+    try {
+      await api.delete("/member/withdraw"); // DELETE API 호출
+      // 탈퇴 성공 후 토큰 삭제 및 로그인 화면 이동
+      await AsyncStorage.removeItem("accessToken");
+      await AsyncStorage.removeItem("refreshToken");
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "LoginScreen" }],
+      });
+    } catch (error) {
+      console.error("회원 탈퇴 실패:", error);
+      alert("회원 탈퇴에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
+  const confirmWithdraw = () => {
+    Alert.alert(
+      "회원 탈퇴",
+      "정말 탈퇴하시겠습니까?",
+      [
+        {
+          text: "취소",
+          style: "cancel",
+        },
+        {
+          text: "확인",
+          onPress: handleWithdraw,
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -144,7 +180,10 @@ export default function SettingPage() {
               <Text style={styles.menuFont}>로그아웃</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.noneLineBox}>
+            <TouchableOpacity
+              style={styles.noneLineBox}
+              onPress={confirmWithdraw}
+            >
               <Text style={[styles.menuFont, { marginBottom: 10 }]}>
                 탈퇴하기
               </Text>
