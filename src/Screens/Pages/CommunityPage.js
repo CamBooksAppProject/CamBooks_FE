@@ -12,9 +12,8 @@ import {
     heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
 import IMAGES from '../../../assets';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
 
 export default function CommunScreen() {
     const navigation = useNavigation();
@@ -27,7 +26,6 @@ export default function CommunScreen() {
         '전체', '서울', '부산', '대구', '인천', '광주', '대전', '울산',
         '세종', '제주', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남',
     ];
-
 
     const regionMap = {
         '전체': null,
@@ -50,7 +48,6 @@ export default function CommunScreen() {
         '경남': 'GYEONGNAM',
     };
 
-
     useEffect(() => {
         if (selectedRegion === '전체') {
             setFilteredPosts(posts);
@@ -69,6 +66,23 @@ export default function CommunScreen() {
         return `${year}.${month}.${day}`;
     };
 
+    const fetchCommentCount = async (postId) => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`http://localhost:8080/cambooks/community/comment/count?postId=${postId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+            if (!res.ok) throw new Error('댓글 수 조회 실패');
+            const count = await res.json();
+            return count;
+        } catch (err) {
+            console.error(`댓글 수 조회 실패 postId:${postId}`, err);
+            return 0;
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -83,14 +97,10 @@ export default function CommunScreen() {
                 },
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             const postList = Array.isArray(data) ? data : data.posts || [];
 
-            // ✅ 좋아요 상태 불러오기
             const keys = await AsyncStorage.getAllKeys();
             const likedKeys = keys.filter(key => key.startsWith('liked_community_'));
             const entries = await AsyncStorage.multiGet(likedKeys);
@@ -99,12 +109,18 @@ export default function CommunScreen() {
                 .filter(([_, value]) => value === 'true')
                 .map(([key]) => parseInt(key.replace('liked_community_', '')));
 
-            const merged = postList.map(post => ({
-                ...post,
-                isLiked: likedPostIds.includes(post.id),
-            }));
+            const merged = await Promise.all(
+                postList.map(async (post) => {
+                    const isLiked = likedPostIds.includes(post.id);
+                    const commentCount = await fetchCommentCount(post.id);
+                    return {
+                        ...post,
+                        isLiked,
+                        commentCount,
+                    };
+                })
+            );
 
-            console.log("커뮤니티 데이터 전체:", merged);
             setPosts(merged);
         } catch (error) {
             console.error("API 통신 오류:", error);
@@ -116,9 +132,6 @@ export default function CommunScreen() {
             fetchData();
         }, [])
     );
-
-
-
 
     const renderItem = ({ item }) => {
         const heartImage = item.isLiked ? IMAGES.REDHEART : IMAGES.EMPTYHEART;
@@ -153,6 +166,8 @@ export default function CommunScreen() {
                     <View style={styles.peopleRow}>
                         <Image source={IMAGES.PEOPLE} resizeMode="contain" style={styles.peopleIcon} />
                         <Text style={styles.iconFont}>{item.currentParticipants}</Text>
+                        <Image source={IMAGES.COMMENT} resizeMode="contain" style={[styles.peopleIcon, { marginLeft: wp(2) }]} />
+                        <Text style={styles.iconFont}>{item.commentCount ?? 0}</Text>
                         <Text style={styles.dateFont}>{formatDate(item.createdAt)}</Text>
                     </View>
                 </View>
@@ -161,7 +176,6 @@ export default function CommunScreen() {
     };
 
     return (
-
         <View style={styles.container}>
             <View style={{ height: hp(3), paddingHorizontal: wp(5.5), marginTop: hp(1) }}>
                 <FlatList
@@ -191,7 +205,7 @@ export default function CommunScreen() {
             </View>
 
             <FlatList
-                data={filteredPosts}  // 필터링된 데이터 사용
+                data={filteredPosts}
                 numColumns={2}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
@@ -219,12 +233,12 @@ export default function CommunScreen() {
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FFFFFF',
     },
+
     regionButton: {
         width: wp(15),
         height: hp(3),
@@ -235,6 +249,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+
     regionButtonSelected: {
         backgroundColor: '#555',
     },
@@ -258,6 +273,7 @@ const styles = StyleSheet.create({
         borderColor: '#CDCDCD',
         marginBottom: hp(1.5),
     },
+
     photo: {
         width: wp(18),
         height: wp(18),
@@ -267,18 +283,21 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         backgroundColor: '#F0F0F0',
     },
+
     heartIcon: {
         height: wp(5),
         width: wp(5),
         marginTop: wp(7),
         marginLeft: wp(8),
     },
+
     title: {
         fontSize: wp(3.5),
         fontWeight: 'bold',
         marginLeft: wp(4),
         marginTop: hp(0.5),
     },
+
     contentsFont: {
         width: wp(32),
         fontSize: wp(2.5),
@@ -286,26 +305,31 @@ const styles = StyleSheet.create({
         marginLeft: wp(4),
         marginTop: hp(0.5),
     },
+
     iconFont: {
         fontSize: wp(2.8),
         fontWeight: 'bold',
         marginLeft: wp(1),
     },
+
     peopleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: hp(1),
         marginLeft: wp(4),
     },
+
     peopleIcon: {
         height: wp(3),
         width: wp(3),
     },
+
     dateFont: {
         fontSize: wp(2.6),
         color: '#7f8c8d',
         marginLeft: wp(2),
     },
+
     additBtn: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -320,10 +344,12 @@ const styles = StyleSheet.create({
         bottom: hp(4),
         right: wp(6),
     },
+
     addIcon: {
         height: wp(6),
         width: wp(6),
     },
+
     emptyText: {
         alignSelf: 'center',
         marginTop: hp(5),

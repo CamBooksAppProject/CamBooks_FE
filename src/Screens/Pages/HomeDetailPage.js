@@ -12,16 +12,21 @@ import {
 import IMAGES from "../../../assets";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
+import { Alert } from "react-native";
 
 export default function HomeDetailPage({ navigation, route }) {
     const { postId } = route.params;
     const [post, setPost] = useState(null);
     const [isHeartFilled, setIsHeartFilled] = useState(false);
+    const [showOptions, setShowOptions] = useState(false);
+    const [myWriterName, setMyWriterName] = useState(null);
+
     const BASE_URL = 'http://localhost:8080';
 
     useEffect(() => {
         fetchPostDetail();
         loadHeartStatus();
+        loadMyWriterName();
     }, []);
 
     const fetchPostDetail = async () => {
@@ -114,6 +119,76 @@ export default function HomeDetailPage({ navigation, route }) {
         }
     };
 
+    const loadMyWriterName = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) return;
+
+            const response = await fetch(`${BASE_URL}/cambooks/member/info`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) throw new Error("유저 정보 조회 실패");
+
+            const data = await response.json();
+            console.log('내 name:', data.name);
+            setMyWriterName(data.name);
+        } catch (e) {
+            console.error("로그인 유저 name 가져오기 실패:", e);
+        }
+    };
+
+
+    const handleDeleteAlert = () => {
+        Alert.alert(
+            "삭제 확인",
+            "삭제하시겠습니까?",
+            [
+                {
+                    text: "취소",
+                    style: "cancel"
+                },
+                {
+                    text: "확인",
+                    style: "destructive",
+                    onPress: () => {
+                        handleConfirmDelete();
+                    }
+                }
+            ],
+            { cancelable: true }
+        );
+    };
+
+
+    const handleConfirmDelete = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const memberIdStr = await AsyncStorage.getItem('userId');
+            const memberId = Number(memberIdStr);
+
+            if (!token || !memberId) throw new Error("토큰 또는 memberId 없음");
+
+            const response = await fetch(`${BASE_URL}/cambooks/used-trade/${memberId}?postId=${postId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) throw new Error("삭제 실패");
+
+            console.log("삭제 완료");
+            setShowConfirm(false);
+            navigation.goBack(); // 삭제 후 뒤로가기
+        } catch (e) {
+            console.error("삭제 오류:", e);
+            setShowConfirm(false);
+        }
+    };
 
 
 
@@ -166,23 +241,53 @@ export default function HomeDetailPage({ navigation, route }) {
                                 flexDirection: "row",
                                 alignItems: "center",
                                 marginBottom: 10,
+                                justifyContent: 'space-between', // 추가
                             }}
                         >
-                            <Image
-                                source={IMAGES.POSTPROFILE}
-                                resizeMode="contain"
-                                style={{ height: 15, width: 15 }}
-                            />
-                            <Text style={styles.nameFont}>{post.writerName}</Text>
-                            <Text style={styles.collegeFont}>{post.university}</Text>
-                            <TouchableOpacity>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Image
+                                    source={IMAGES.POSTPROFILE}
+                                    resizeMode="contain"
+                                    style={{ height: 15, width: 15 }}
+                                />
+                                <Text style={styles.nameFont}>{post.writerName}</Text>
+                                <Text style={styles.collegeFont}>{post.university}</Text>
+                            </View>
+
+                            {showOptions && (
+                                <View style={styles.popup}>
+                                    <TouchableOpacity onPress={() => {
+                                        setShowOptions(false);
+                                        console.log("신고하기");
+                                    }}>
+                                        <Text style={styles.popupItem}>신고하기</Text>
+                                    </TouchableOpacity>
+
+                                    {myWriterName === post.writerName && (
+                                        <>
+                                            <View style={styles.popupDivider} />
+                                            <TouchableOpacity onPress={() => {
+                                                setShowOptions(false);
+                                                handleDeleteAlert();
+                                            }}>
+                                                <Text style={styles.popupItem}>삭제하기</Text>
+                                            </TouchableOpacity>
+                                        </>
+                                    )}
+                                </View>
+                            )}
+
+
+
+                            <TouchableOpacity onPress={() => setShowOptions(!showOptions)}>
                                 <Image
                                     source={IMAGES.THREEDOT}
                                     resizeMode="contain"
-                                    style={{ height: 13, width: 13, marginLeft: "auto" }}
+                                    style={{ height: 13, width: 13 }}
                                 />
                             </TouchableOpacity>
                         </View>
+
 
                         <Text style={styles.titleFont}>{post.title}</Text>
 
@@ -359,4 +464,29 @@ const styles = StyleSheet.create({
         fontSize: wp("4.8%"),
         fontWeight: "bold",
     },
+    popup: {
+        position: 'absolute',
+        top: hp("0.5%"),
+        right: wp("5%"),
+        backgroundColor: 'white',
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+        zIndex: 1000,
+    },
+    popupItem: {
+        fontSize: wp("3.5%"),
+        paddingVertical: 5,
+        color: "#333",
+    },
+    popupDivider: {
+        height: 1,
+        backgroundColor: '#ddd',
+    }
+
 });
