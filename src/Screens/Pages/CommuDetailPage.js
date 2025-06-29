@@ -2,15 +2,22 @@ import { StyleSheet, View, TouchableOpacity, Image, SafeAreaView, Text, ScrollVi
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import IMAGES from '../../../assets';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
+import { Alert } from "react-native";
+
 
 export default function CommuDetailPage({ navigation, route }) {
     const { postId } = route.params;
     const BASE_URL = 'http://localhost:8080';
 
     const [post, setPost] = useState(null);
+    const [comments, setComments] = useState([]);
+    const [commentText, setCommentText] = useState('');
     const [isHeartFilled, setIsHeartFilled] = useState(false);
     const [focusedButton, setFocusedButton] = useState('모집공고');
     const [isJoined, setIsJoined] = useState(false);
+    const [showOptions, setShowOptions] = useState(false);
+    const [myWriterName, setMyWriterName] = useState(null);
 
     const regionMap = {
         SEOUL: '서울',
@@ -32,14 +39,39 @@ export default function CommuDetailPage({ navigation, route }) {
         GYEONGNAM: '경남',
     };
 
+    const formatCreatedAt = (isoString) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${month}월 ${day}일 ${hours}:${minutes}`;
+    };
+
+
+
+    const formatDateTime = (isoStr) => {
+        if (!isoStr) return '-';
+        const d = new Date(isoStr);
+        const yyyy = d.getFullYear();
+        const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+        const dd = d.getDate().toString().padStart(2, '0');
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        const dayName = days[d.getDay()];
+        return `${yyyy}-${mm}-${dd} (${dayName})`;
+    };
+
 
     const getKoreanRegion = (regionCode) => regionMap[regionCode] || regionCode;
 
 
     useEffect(() => {
         fetchPostDetail();
+        fetchComments();
         loadHeartStatus();
         loadJoinStatus();
+        loadMyWriterName();
     }, []);
 
     const fetchPostDetail = async () => {
@@ -64,6 +96,61 @@ export default function CommuDetailPage({ navigation, route }) {
             console.error('상세 API 오류:', error);
         }
     };
+
+    const fetchComments = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`${BASE_URL}/cambooks/community/comment?postId=${postId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+
+            if (!res.ok) throw new Error(`댓글 불러오기 실패: ${res.status}`);
+
+            const text = await res.text();
+
+            if (!text || text.trim() === "" || text.trim() === "null") {
+                setComments([]);
+                return;
+            }
+
+            const data = JSON.parse(text);
+            setComments(data);
+        } catch (err) {
+            console.error('댓글 불러오기 실패:', err);
+        }
+    };
+
+    const handleCommentSubmit = async () => {
+        if (!commentText.trim()) return;
+
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`${BASE_URL}/cambooks/community/comment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    comment: commentText.trim(),
+                }),
+            });
+
+            if (!res.ok) throw new Error('댓글 등록 실패');
+
+            setCommentText('');
+            await fetchComments();
+        } catch (err) {
+            console.error(err);
+            Alert.alert('오류', '댓글 작성 중 문제가 발생했습니다.');
+        }
+    };
+
+
 
     const handleButtonPress = (button) => {
         setFocusedButton(button);
@@ -132,58 +219,109 @@ export default function CommuDetailPage({ navigation, route }) {
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) throw new Error('로그인이 필요합니다.');
 
-            if (isJoined) {
-                // 참가 취소 API 호출
-                const response = await fetch(`${BASE_URL}/cambooks/community/leave/${postId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
+            // join API 단일 호출로 토글 처리
+            const response = await fetch(`${BASE_URL}/cambooks/community/join/${postId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
 
-                if (!response.ok) throw new Error('참가 취소 실패');
+            if (!response.ok) throw new Error('참가 토글 실패');
 
-                await AsyncStorage.removeItem(`joined_community_${postId}`);
-                setIsJoined(false);
-                setPost(prev => ({
-                    ...prev,
-                    currentParticipants: Math.max(prev.currentParticipants - 1, 0),
-                }));
-            } else {
-                // 참가 API 호출
-                const response = await fetch(`${BASE_URL}/cambooks/community/join/${postId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
+            // 참가 상태 반전
+            const newJoinStatus = !isJoined;
+            setIsJoined(newJoinStatus);
 
-                if (!response.ok) throw new Error('참가 요청 실패');
+            // 참가자 수 증가/감소
+            setPost(prev => ({
+                ...prev,
+                currentParticipants: newJoinStatus
+                    ? prev.currentParticipants + 1
+                    : Math.max(prev.currentParticipants - 1, 0),
+            }));
 
+            if (newJoinStatus) {
                 await AsyncStorage.setItem(`joined_community_${postId}`, 'true');
-                setIsJoined(true);
-                setPost(prev => ({
-                    ...prev,
-                    currentParticipants: prev.currentParticipants + 1,
-                }));
+            } else {
+                await AsyncStorage.removeItem(`joined_community_${postId}`);
             }
+
         } catch (error) {
             console.error('참가 토글 실패:', error);
         }
     };
 
+    const loadMyWriterName = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) return;
 
-    const formatDateTime = (isoStr) => {
-        if (!isoStr) return '-';
-        const d = new Date(isoStr);
-        const yyyy = d.getFullYear();
-        const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-        const dd = d.getDate().toString().padStart(2, '0');
-        const days = ['일', '월', '화', '수', '목', '금', '토'];
-        const dayName = days[d.getDay()];
-        return `${yyyy}-${mm}-${dd} (${dayName})`;
+            const response = await fetch(`${BASE_URL}/cambooks/member/info`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) throw new Error("유저 정보 조회 실패");
+
+            const data = await response.json();
+            console.log('내 name:', data.name);
+            setMyWriterName(data.name);
+        } catch (e) {
+            console.error("로그인 유저 name 가져오기 실패:", e);
+        }
+    };
+
+
+    const handleDeleteAlert = () => {
+        Alert.alert(
+            "삭제 확인",
+            "삭제하시겠습니까?",
+            [
+                {
+                    text: "취소",
+                    style: "cancel"
+                },
+                {
+                    text: "확인",
+                    style: "destructive",
+                    onPress: () => {
+                        handleConfirmDelete();
+                    }
+                }
+            ],
+            { cancelable: true }
+        );
+    };
+
+
+    const handleConfirmDelete = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const memberIdStr = await AsyncStorage.getItem('userId');
+            const memberId = Number(memberIdStr);
+
+            if (!token || !memberId) throw new Error("토큰 또는 memberId 없음");
+
+            const response = await fetch(`${BASE_URL}/cambooks/used-trade/${memberId}?postId=${postId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) throw new Error("삭제 실패");
+
+            console.log("삭제 완료");
+            setShowConfirm(false);
+            navigation.goBack(); // 삭제 후 뒤로가기
+        } catch (e) {
+            console.error("삭제 오류:", e);
+            setShowConfirm(false);
+        }
     };
 
     if (!post) {
@@ -193,7 +331,6 @@ export default function CommuDetailPage({ navigation, route }) {
             </View>
         );
     }
-
 
     return (
         <View style={styles.container}>
@@ -220,10 +357,34 @@ export default function CommuDetailPage({ navigation, route }) {
                         <View style={{ flexDirection: 'column', marginLeft: 15, flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
                                 <Text style={styles.titleFont}>{post.title || '제목'}</Text>
-                                <TouchableOpacity style={{ marginLeft: 'auto' }}>
+                                <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={() => setShowOptions(!showOptions)}>
                                     <Image source={IMAGES.THREEDOT} resizeMode="contain" style={{ height: 12, width: 12 }} />
                                 </TouchableOpacity>
                             </View>
+
+
+                            {showOptions && (
+                                <View style={styles.popup}>
+                                    <TouchableOpacity onPress={() => {
+                                        setShowOptions(false);
+                                        console.log("신고하기");
+                                    }}>
+                                        <Text style={styles.popupItem}>신고하기</Text>
+                                    </TouchableOpacity>
+
+                                    {myWriterName === post.writerName && (
+                                        <>
+                                            <View style={styles.popupDivider} />
+                                            <TouchableOpacity onPress={() => {
+                                                setShowOptions(false);
+                                                handleDeleteAlert();
+                                            }}>
+                                                <Text style={styles.popupItem}>삭제하기</Text>
+                                            </TouchableOpacity>
+                                        </>
+                                    )}
+                                </View>
+                            )}
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                                 <Image source={IMAGES.PEOPLE} resizeMode="contain" style={{ height: 13, width: 13 }} />
@@ -302,16 +463,48 @@ export default function CommuDetailPage({ navigation, route }) {
 
                     <View style={styles.line} />
 
-                    {/* 댓글 영역 - 필요하면 여기에 추가 */}
+                    <View>
+                        {comments.length > 0 ? (
+                            comments.map((comment, idx) => {
+                                const createdAtFormatted = formatCreatedAt(comment.createdAt);
 
+                                return (
+                                    <View key={idx} style={styles.commentView}>
+
+                                        <View style={styles.commentLeft}>
+                                            <Image source={IMAGES.POSTPROFILE} style={styles.commentProfile} />
+                                            <Text style={styles.commentName}>{comment?.name ?? '익명'}</Text>
+                                        </View>
+
+
+                                        <View style={styles.commentMiddle}>
+                                            <Text style={styles.commentFont}>{comment?.content ?? ''}</Text>
+                                        </View>
+
+                                        <View style={styles.commentRight}>
+                                            <Text style={styles.commentTime}>{createdAtFormatted}</Text>
+                                        </View>
+                                    </View>
+                                );
+                            })
+                        ) : (
+                            <Text style={{ textAlign: 'center', color: 'gray', marginTop: 10 }}>댓글이 없습니다.</Text>
+                        )}
+                    </View>
+                    <View style={{ height: 80 }} />
                 </ScrollView>
             </View>
 
             <View style={styles.bottomView}>
                 <View style={styles.inputView}>
-                    <TextInput style={styles.input} placeholder="댓글을 입력하세요." />
-                    <TouchableOpacity style={styles.sendBtnView}>
-                        <Image source={IMAGES.SEND} resizeMode="contain" tintColor="white" style={{ width: 25, height: 25 }} />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="댓글을 입력하세요."
+                        value={commentText}
+                        onChangeText={setCommentText}
+                    />
+                    <TouchableOpacity style={styles.sendBtnView} onPress={handleCommentSubmit}>
+                        <Image source={IMAGES.SEND} style={{ width: 25, height: 25, tintColor: 'white' }} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -439,6 +632,52 @@ const styles = StyleSheet.create({
         borderBottomWidth: 0.5,
         borderBottomColor: 'gray',
     },
+    commentView: {
+        flexDirection: 'row',
+        backgroundColor: '#F9F9F9',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginVertical: 6,
+        borderRadius: 8,
+        alignItems: 'center',
+        width: '95%',
+        alignSelf: 'center',
+    },
+    commentLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 3,
+    },
+    commentProfile: {
+        width: 20,
+        height: 20,
+        borderRadius: 15,
+        marginRight: 8,
+    },
+    commentName: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    commentMiddle: {
+        flex: 5,
+        justifyContent: 'center',
+        paddingHorizontal: 10,
+    },
+    commentFont: {
+        fontSize: 14,
+        color: '#555',
+        lineHeight: 20,
+    },
+    commentRight: {
+        flex: 2,
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+    },
+    commentTime: {
+        fontSize: 12,
+        color: 'gray',
+    },
     inputView: {
         width: '85%',
         height: 45,
@@ -468,4 +707,28 @@ const styles = StyleSheet.create({
         marginLeft: 12,
         fontWeight: '600',
     },
+    popup: {
+        position: 'absolute',
+        top: hp("0.5%"),
+        right: wp("5%"),
+        backgroundColor: 'white',
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+        zIndex: 1000,
+    },
+    popupItem: {
+        fontSize: wp("3.5%"),
+        paddingVertical: 5,
+        color: "#333",
+    },
+    popupDivider: {
+        height: 1,
+        backgroundColor: '#ddd',
+    }
 });
