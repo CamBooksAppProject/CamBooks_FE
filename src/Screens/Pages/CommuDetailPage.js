@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import IMAGES from '../../../assets';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
 import { Alert } from "react-native";
-
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 export default function CommuDetailPage({ navigation, route }) {
     const { postId } = route.params;
@@ -75,6 +76,12 @@ export default function CommuDetailPage({ navigation, route }) {
         loadJoinStatus();
         loadMyUserId();
     }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchPostDetail();
+        }, [postId])
+    );
 
     const fetchPostDetail = async () => {
         try {
@@ -405,6 +412,15 @@ export default function CommuDetailPage({ navigation, route }) {
                                             <View style={styles.popupDivider} />
                                             <TouchableOpacity onPress={() => {
                                                 setShowOptions(false);
+                                                navigation.navigate('CommunityEditPage', { postId });
+                                            }}>
+                                                <Text style={styles.popupItem}>수정하기</Text>
+                                            </TouchableOpacity>
+
+                                            <View style={styles.popupDivider} />
+
+                                            <TouchableOpacity onPress={() => {
+                                                setShowOptions(false);
                                                 handleDeleteAlert();
                                             }}>
                                                 <Text style={styles.popupItem}>삭제하기</Text>
@@ -413,6 +429,7 @@ export default function CommuDetailPage({ navigation, route }) {
                                     )}
                                 </View>
                             )}
+
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                                 <Image source={IMAGES.PEOPLE} resizeMode="contain" style={{ height: 13, width: 13 }} />

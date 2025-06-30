@@ -29,6 +29,10 @@ import HomePostPage from "./src/Screens/Pages/HomePostPage";
 import CommuPostPage from "./src/Screens/Pages/CommuPostPage";
 import FreeBoardPostPage from "./src/Screens/Pages/FreeBoardPostPage";
 
+import HomeEditPage from "./src/Screens/Pages/HomeEditPage";
+import CommunityEditPage from "./src/Screens/Pages/CommunityEditPage";
+import FreeBoardEditPage from "./src/Screens/Pages/FreeBoardEditPage";
+
 import HomeDetailPage from "./src/Screens/Pages/HomeDetailPage";
 import CommuDetailPage from "./src/Screens/Pages/CommuDetailPage";
 import FreeBoardDetailPage from "./src/Screens/Pages/FreeBoardDetailPage";
@@ -210,6 +214,23 @@ export default function App() {
           <Stack.Screen
             name="FreeBoardPostPage"
             component={FreeBoardPostPage}
+            options={{ headerShown: false }}
+          />
+
+
+          <Stack.Screen
+            name="HomeEditPage"
+            component={HomeEditPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CommunityEditPage"
+            component={CommunityEditPage}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="FreeBoardEditPage"
+            component={FreeBoardEditPage}
             options={{ headerShown: false }}
           />
           <Stack.Screen
