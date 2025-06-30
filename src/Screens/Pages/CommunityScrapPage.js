@@ -27,9 +27,38 @@ export default function CommunScreen() {
         }, [])
     );
 
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = ('0' + (date.getMonth() + 1)).slice(-2);
+        const day = ('0' + date.getDate()).slice(-2);
+        return `${year}.${month}.${day}`;
+    };
+
+    const fetchCommentCount = async (postId) => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`http://localhost:8080/cambooks/community/comment/count?postId=${postId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+            if (!res.ok) throw new Error('댓글 수 조회 실패');
+            const count = await res.json();
+            return count;
+        } catch (err) {
+            console.error(`댓글 수 조회 실패 postId:${postId}`, err);
+            return 0;
+        }
+    };
+
     const fetchScrappedPosts = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
+
             const likedRes = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
                 method: "GET",
                 headers: {
@@ -38,25 +67,46 @@ export default function CommunScreen() {
                 },
             });
 
+            if (!likedRes.ok) throw new Error(`HTTP error! status: ${likedRes.status}`);
             const likedData = await likedRes.json();
-            console.log("스크랩 데이터 전체:", likedData);
 
             const likedPosts = likedData["COMMUNITY"] || [];
-            console.log("좋아요 게시글 개수:", likedPosts.length);
-            console.log("좋아요 게시글 목록:", likedPosts);
 
-            // id 중복 체크 (경고 로그 출력)
+            // id 중복 체크
             const ids = likedPosts.map(post => post.id);
             const uniqueIds = new Set(ids);
             if (uniqueIds.size !== ids.length) {
                 console.warn("좋아요 게시글 id 중복 감지됨!");
             }
 
-            setItems(likedPosts);
+            // 로컬에 저장된 스크랩 정보 키 조회 (예: scrapped_community_게시글id)
+            const keys = await AsyncStorage.getAllKeys();
+            const scrappedKeys = keys.filter(key => key.startsWith('scrapped_community_'));
+            const entries = await AsyncStorage.multiGet(scrappedKeys);
+            const scrappedPostIds = entries
+                .filter(([_, value]) => value === 'true')
+                .map(([key]) => parseInt(key.replace('scrapped_community_', '')));
+
+            // 각 게시글에 댓글 수와 로컬 스크랩 상태 추가
+            const merged = await Promise.all(
+                likedPosts.map(async (post) => {
+                    const isScrapped = scrappedPostIds.includes(post.id);
+                    const commentCount = await fetchCommentCount(post.id);  // 댓글 수 가져오는 함수
+
+                    return {
+                        ...post,
+                        isScrapped,
+                        commentCount,
+                    };
+                })
+            );
+
+            setItems(merged);
         } catch (error) {
             console.error("스크랩 게시글 불러오기 실패:", error);
         }
     };
+
 
 
     const renderItem = ({ item }) => {
@@ -92,6 +142,9 @@ export default function CommunScreen() {
                     <View style={styles.peopleRow}>
                         <Image source={IMAGES.PEOPLE} resizeMode="contain" style={styles.peopleIcon} />
                         <Text style={styles.iconFont}>{item.currentParticipants}</Text>
+                        <Image source={IMAGES.COMMENT} resizeMode="contain" style={[styles.peopleIcon, { marginLeft: wp(2) }]} />
+                        <Text style={styles.iconFont}>{item.commentCount ?? 0}</Text>
+                        <Text style={styles.dateFont}>{formatDate(item.createdAt)}</Text>
                     </View>
                 </View>
             </TouchableOpacity>
@@ -175,6 +228,11 @@ const styles = StyleSheet.create({
     peopleIcon: {
         height: wp(3),
         width: wp(3),
+    },
+    dateFont: {
+        fontSize: wp(2.6),
+        color: '#7f8c8d',
+        marginLeft: wp(2),
     },
     emptyText: {
         alignSelf: 'center',

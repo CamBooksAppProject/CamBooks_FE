@@ -17,7 +17,9 @@ export default function CommuDetailPage({ navigation, route }) {
     const [focusedButton, setFocusedButton] = useState('모집공고');
     const [isJoined, setIsJoined] = useState(false);
     const [showOptions, setShowOptions] = useState(false);
-    const [myWriterName, setMyWriterName] = useState(null);
+    const [myUserId, setMyUserId] = useState(null);
+    const [visibleOptionId, setVisibleOptionId] = useState(null);
+
 
     const regionMap = {
         SEOUL: '서울',
@@ -71,7 +73,7 @@ export default function CommuDetailPage({ navigation, route }) {
         fetchComments();
         loadHeartStatus();
         loadJoinStatus();
-        loadMyWriterName();
+        loadMyUserId();
     }, []);
 
     const fetchPostDetail = async () => {
@@ -253,28 +255,16 @@ export default function CommuDetailPage({ navigation, route }) {
         }
     };
 
-    const loadMyWriterName = async () => {
+    const loadMyUserId = async () => {
         try {
-            const token = await AsyncStorage.getItem('accessToken');
-            if (!token) return;
-
-            const response = await fetch(`${BASE_URL}/cambooks/member/info`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (!response.ok) throw new Error("유저 정보 조회 실패");
-
-            const data = await response.json();
-            console.log('내 name:', data.name);
-            setMyWriterName(data.name);
+            const userIdStr = await AsyncStorage.getItem('userId');
+            if (!userIdStr) return;
+            setMyUserId(Number(userIdStr));
+            console.log("내 userId:", userIdStr);
         } catch (e) {
-            console.error("로그인 유저 name 가져오기 실패:", e);
+            console.error("userId 로드 실패:", e);
         }
     };
-
 
     const handleDeleteAlert = () => {
         Alert.alert(
@@ -297,16 +287,32 @@ export default function CommuDetailPage({ navigation, route }) {
         );
     };
 
+    const showDeleteCommentAlert = (commentId) => {
+        Alert.alert(
+            "댓글 삭제 확인",
+            "댓글을 삭제하시겠습니까?",
+            [
+                {
+                    text: "취소",
+                    style: "cancel",
+                },
+                {
+                    text: "삭제",
+                    style: "destructive",
+                    onPress: () => handleDeleteComment(commentId),
+                },
+            ],
+            { cancelable: true }
+        );
+    };
+
 
     const handleConfirmDelete = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const memberIdStr = await AsyncStorage.getItem('userId');
-            const memberId = Number(memberIdStr);
+            if (!token) throw new Error("토큰 없음");
 
-            if (!token || !memberId) throw new Error("토큰 또는 memberId 없음");
-
-            const response = await fetch(`${BASE_URL}/cambooks/used-trade/${memberId}?postId=${postId}`, {
+            const response = await fetch(`${BASE_URL}/cambooks/community/${postId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -316,13 +322,35 @@ export default function CommuDetailPage({ navigation, route }) {
             if (!response.ok) throw new Error("삭제 실패");
 
             console.log("삭제 완료");
-            setShowConfirm(false);
-            navigation.goBack(); // 삭제 후 뒤로가기
+            navigation.goBack();
         } catch (e) {
             console.error("삭제 오류:", e);
-            setShowConfirm(false);
         }
     };
+
+
+    const handleDeleteComment = async (commentId) => {
+        try {
+            const token = await AsyncStorage.getItem("accessToken");
+            if (!token) throw new Error("토큰 없음");
+
+            const res = await fetch(`${BASE_URL}/cambooks/community/comment/${commentId}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!res.ok && res.status !== 204) throw new Error(`삭제 실패: ${res.status}`);
+
+            console.log("댓글 삭제 완료");
+            await fetchComments();
+        } catch (e) {
+            console.error("댓글 삭제 실패:", e);
+            Alert.alert("오류", "댓글 삭제 중 문제가 발생했습니다.");
+        }
+    };
+
 
     if (!post) {
         return (
@@ -372,7 +400,7 @@ export default function CommuDetailPage({ navigation, route }) {
                                         <Text style={styles.popupItem}>신고하기</Text>
                                     </TouchableOpacity>
 
-                                    {myWriterName === post.writerName && (
+                                    {myUserId === post.userId && (
                                         <>
                                             <View style={styles.popupDivider} />
                                             <TouchableOpacity onPress={() => {
@@ -467,15 +495,14 @@ export default function CommuDetailPage({ navigation, route }) {
                         {comments.length > 0 ? (
                             comments.map((comment, idx) => {
                                 const createdAtFormatted = formatCreatedAt(comment.createdAt);
+                                const isMyComment = comment.userId === myUserId;
 
                                 return (
                                     <View key={idx} style={styles.commentView}>
-
                                         <View style={styles.commentLeft}>
                                             <Image source={IMAGES.POSTPROFILE} style={styles.commentProfile} />
                                             <Text style={styles.commentName}>{comment?.name ?? '익명'}</Text>
                                         </View>
-
 
                                         <View style={styles.commentMiddle}>
                                             <Text style={styles.commentFont}>{comment?.content ?? ''}</Text>
@@ -483,6 +510,42 @@ export default function CommuDetailPage({ navigation, route }) {
 
                                         <View style={styles.commentRight}>
                                             <Text style={styles.commentTime}>{createdAtFormatted}</Text>
+
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    if (visibleOptionId === comment.id) {
+                                                        setVisibleOptionId(null);
+                                                    } else {
+                                                        setVisibleOptionId(comment.id);
+                                                    }
+                                                }}
+                                                style={{ padding: 5 }}
+                                            >
+                                                <Image source={IMAGES.THREEDOT} resizeMode="contain" style={{ height: 12, width: 12 }} />
+                                            </TouchableOpacity>
+
+                                            {visibleOptionId === comment.id && (
+                                                <View style={styles.popupComment}>
+                                                    <TouchableOpacity onPress={() => {
+                                                        setVisibleOptionId(null);
+                                                        console.log("신고하기");
+                                                    }}>
+                                                        <Text style={styles.popupItem}>신고하기</Text>
+                                                    </TouchableOpacity>
+
+                                                    {isMyComment && (
+                                                        <>
+                                                            <View style={styles.popupDivider} />
+                                                            <TouchableOpacity onPress={() => {
+                                                                setVisibleOptionId(null);
+                                                                showDeleteCommentAlert(comment.id);
+                                                            }}>
+                                                                <Text style={styles.popupItem}>삭제하기</Text>
+                                                            </TouchableOpacity>
+                                                        </>
+                                                    )}
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
                                 );
@@ -671,10 +734,12 @@ const styles = StyleSheet.create({
     },
     commentRight: {
         flex: 2,
-        alignItems: 'flex-end',
-        justifyContent: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
     },
     commentTime: {
+        marginLeft: 20,
         fontSize: 12,
         color: 'gray',
     },
@@ -721,6 +786,23 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 5,
         zIndex: 1000,
+        minWidth: 70,
+    },
+    popupComment: {
+        position: 'absolute',
+        top: 2,
+        right: 20,
+        backgroundColor: 'white',
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+        zIndex: 1000,
+        minWidth: 70,
     },
     popupItem: {
         fontSize: wp("3.5%"),
