@@ -19,14 +19,14 @@ export default function HomeDetailPage({ navigation, route }) {
     const [post, setPost] = useState(null);
     const [isHeartFilled, setIsHeartFilled] = useState(false);
     const [showOptions, setShowOptions] = useState(false);
-    const [myWriterName, setMyWriterName] = useState(null);
+    const [myUserId, setMyUserId] = useState(null);
 
     const BASE_URL = 'http://localhost:8080';
 
     useEffect(() => {
         fetchPostDetail();
         loadHeartStatus();
-        loadMyWriterName();
+        loadMyUserId();
     }, []);
 
     const fetchPostDetail = async () => {
@@ -119,25 +119,14 @@ export default function HomeDetailPage({ navigation, route }) {
         }
     };
 
-    const loadMyWriterName = async () => {
+    const loadMyUserId = async () => {
         try {
-            const token = await AsyncStorage.getItem('accessToken');
-            if (!token) return;
-
-            const response = await fetch(`${BASE_URL}/cambooks/member/info`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (!response.ok) throw new Error("유저 정보 조회 실패");
-
-            const data = await response.json();
-            console.log('내 name:', data.name);
-            setMyWriterName(data.name);
+            const userIdStr = await AsyncStorage.getItem('userId');
+            if (!userIdStr) return;
+            setMyUserId(Number(userIdStr));
+            console.log("내 userId:", userIdStr);
         } catch (e) {
-            console.error("로그인 유저 name 가져오기 실패:", e);
+            console.error("userId 로드 실패:", e);
         }
     };
 
@@ -167,12 +156,9 @@ export default function HomeDetailPage({ navigation, route }) {
     const handleConfirmDelete = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const memberIdStr = await AsyncStorage.getItem('userId');
-            const memberId = Number(memberIdStr);
+            if (!token) throw new Error("토큰 없음");
 
-            if (!token || !memberId) throw new Error("토큰 또는 memberId 없음");
-
-            const response = await fetch(`${BASE_URL}/cambooks/used-trade/${memberId}?postId=${postId}`, {
+            const response = await fetch(`${BASE_URL}/cambooks/used-trade/${postId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -182,11 +168,9 @@ export default function HomeDetailPage({ navigation, route }) {
             if (!response.ok) throw new Error("삭제 실패");
 
             console.log("삭제 완료");
-            setShowConfirm(false);
             navigation.goBack(); // 삭제 후 뒤로가기
         } catch (e) {
             console.error("삭제 오류:", e);
-            setShowConfirm(false);
         }
     };
 
@@ -263,7 +247,7 @@ export default function HomeDetailPage({ navigation, route }) {
                                         <Text style={styles.popupItem}>신고하기</Text>
                                     </TouchableOpacity>
 
-                                    {myWriterName === post.writerName && (
+                                    {myUserId === post.userId && (
                                         <>
                                             <View style={styles.popupDivider} />
                                             <TouchableOpacity onPress={() => {
