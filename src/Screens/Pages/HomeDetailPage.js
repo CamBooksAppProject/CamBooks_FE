@@ -13,6 +13,8 @@ import IMAGES from "../../../assets";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
 import { Alert } from "react-native";
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 export default function HomeDetailPage({ navigation, route }) {
     const { postId } = route.params;
@@ -28,6 +30,12 @@ export default function HomeDetailPage({ navigation, route }) {
         loadHeartStatus();
         loadMyUserId();
     }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchPostDetail();
+        }, [postId])
+    );
 
     const fetchPostDetail = async () => {
         try {
@@ -250,6 +258,15 @@ export default function HomeDetailPage({ navigation, route }) {
                                     {myUserId === post.userId && (
                                         <>
                                             <View style={styles.popupDivider} />
+                                            <TouchableOpacity onPress={() => {
+                                                setShowOptions(false);
+                                                navigation.navigate('HomeEditPage', { postId });
+                                            }}>
+                                                <Text style={styles.popupItem}>수정하기</Text>
+                                            </TouchableOpacity>
+
+                                            <View style={styles.popupDivider} />
+
                                             <TouchableOpacity onPress={() => {
                                                 setShowOptions(false);
                                                 handleDeleteAlert();

@@ -6,6 +6,8 @@ import {
 import IMAGES from '../../../assets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 export default function FreeBoardDetailPage({ route, navigation }) {
     const { postId } = route.params;
@@ -26,6 +28,12 @@ export default function FreeBoardDetailPage({ route, navigation }) {
         loadHeartStatus();
         loadMyUserId();
     }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchPostDetail();
+        }, [postId])
+    );
 
     const formatCreatedAt = (isoString) => {
         if (!isoString) return '';
@@ -313,6 +321,15 @@ export default function FreeBoardDetailPage({ route, navigation }) {
                                         <View style={styles.popupDivider} />
                                         <TouchableOpacity onPress={() => {
                                             setShowOptions(false);
+                                            navigation.navigate('FreeBoardEditPage', { postId });
+                                        }}>
+                                            <Text style={styles.popupItem}>수정하기</Text>
+                                        </TouchableOpacity>
+
+                                        <View style={styles.popupDivider} />
+
+                                        <TouchableOpacity onPress={() => {
+                                            setShowOptions(false);
                                             handleDeleteAlert();
                                         }}>
                                             <Text style={styles.popupItem}>삭제하기</Text>
@@ -321,6 +338,7 @@ export default function FreeBoardDetailPage({ route, navigation }) {
                                 )}
                             </View>
                         )}
+
 
 
                         <Text style={styles.titleFont}>{post.title}</Text>
