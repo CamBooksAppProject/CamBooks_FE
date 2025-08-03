@@ -7,7 +7,8 @@ import {
     TextInput,
     Text,
     ScrollView,
-    SafeAreaView
+    SafeAreaView,
+    Alert,
 } from 'react-native';
 import IMAGES from '../../../assets';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -29,11 +30,17 @@ export default function HomePostPage({ navigation }) {
     const [isbn, setIsbn] = useState('');
     const [contentLengthAlertShown, setContentLengthAlertShown] = useState(false);
 
+
     const toggleOption = (option) => {
         setSelectedOptions({
             direct: option === 'direct',
             delivery: option === 'delivery',
         });
+    };
+
+    const isValidISBN = (isbn) => {
+        const cleanIsbn = isbn.replace(/[-\s]/g, '');
+        return /^(?:\d{10}|\d{13})$/.test(cleanIsbn);
     };
 
     const handleSelectPhoto = async () => {
@@ -81,8 +88,28 @@ export default function HomePostPage({ navigation }) {
             throw new Error('입력값을 확인하세요.!!');
         }
 
+        if (!title.trim()) {
+            Alert.alert('제목을 입력해주세요.');
+            return;
+        }
+
+        if (!content.trim()) {
+            Alert.alert('내용을 입력해주세요.');
+            return;
+        }
+
+        if (!price.trim() || isNaN(Number(price))) {
+            Alert.alert('가격을 숫자로 입력해주세요.');
+            return;
+        }
+
+        if (isbn && !isValidISBN(isbn)) {
+            Alert.alert('유효하지 않은 ISBN입니다. 10자리 또는 13자리 숫자를 입력하세요.');
+            return;
+        }
+
         if (images.length === 0) {
-            alert('최소 1장의 사진을 반드시 첨부해야 합니다.');
+            Alert.alert('최소 1장의 사진을 반드시 첨부해야 합니다.');
             return;
         }
 
@@ -233,11 +260,11 @@ export default function HomePostPage({ navigation }) {
                         />
                     </View>
 
-                    <View style={styles.isbnEdit}>
+                    <View style={styles.priceEdit}>
                         <TextInput
                             style={{ marginLeft: wp('4%'), fontSize: wp('4%') }}
-                            placeholder="ISBN을 입력하세요."
-                            keyboardType="default"
+                            placeholder="도서 ISBN을 입력하세요 (10 or 13자리)"
+                            keyboardType="numeric"
                             value={isbn}
                             onChangeText={setIsbn}
                         />
@@ -252,7 +279,7 @@ export default function HomePostPage({ navigation }) {
                             value={content}
                             onChangeText={(text) => {
                                 if (text.length >= 500 && !contentLengthAlertShown) {
-                                    alert('내용은 500자까지만 입력할 수 있습니다.');
+                                    Alert.alert('내용은 500자까지만 입력할 수 있습니다.');
                                     setContentLengthAlertShown(true);
                                 }
                                 if (text.length < 500 && contentLengthAlertShown) {
