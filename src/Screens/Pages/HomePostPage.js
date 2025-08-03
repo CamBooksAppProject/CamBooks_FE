@@ -26,6 +26,7 @@ export default function HomePostPage({ navigation }) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [price, setPrice] = useState('');
+    const [isbn, setIsbn] = useState('');
     const [contentLengthAlertShown, setContentLengthAlertShown] = useState(false);
 
     const toggleOption = (option) => {
@@ -90,6 +91,7 @@ export default function HomePostPage({ navigation }) {
             content: content.trim(),
             price: Number(price),
             tradeMethod,
+            isbn: isbn.trim(),
         };
 
         const dtoFileUri = FileSystem.cacheDirectory + 'dto.json';
@@ -231,6 +233,16 @@ export default function HomePostPage({ navigation }) {
                         />
                     </View>
 
+                    <View style={styles.isbnEdit}>
+                        <TextInput
+                            style={{ marginLeft: wp('4%'), fontSize: wp('4%') }}
+                            placeholder="ISBN을 입력하세요."
+                            keyboardType="default"
+                            value={isbn}
+                            onChangeText={setIsbn}
+                        />
+                    </View>
+
                     <View style={styles.contentsEdit}>
                         <TextInput
                             style={{ padding: wp('4%'), fontSize: wp('3.5%') }}
@@ -338,6 +350,16 @@ const styles = StyleSheet.create({
         marginBottom: hp('2%'),
     },
     priceEdit: {
+        justifyContent: 'center',
+        alignSelf: 'center',
+        width: wp('90%'),
+        height: hp('6.5%'),
+        borderColor: 'gray',
+        borderWidth: 0.5,
+        borderRadius: 15,
+        marginBottom: hp('2%'),
+    },
+    isbnEdit: {
         justifyContent: 'center',
         alignSelf: 'center',
         width: wp('90%'),
