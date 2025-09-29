@@ -14,13 +14,13 @@ import {
 import IMAGES from '../../../assets';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function CommunScreen() {
     const navigation = useNavigation();
     const [posts, setPosts] = useState([]);
     const [selectedRegion, setSelectedRegion] = useState('전체');
     const [filteredPosts, setFilteredPosts] = useState([]);
-    const BASE_URL = 'http://localhost:8080';
 
     const regions = [
         '전체', '서울', '부산', '대구', '인천', '광주', '대전', '울산',

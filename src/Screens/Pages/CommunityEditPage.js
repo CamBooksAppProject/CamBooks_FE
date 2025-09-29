@@ -15,6 +15,7 @@ import IMAGES from '../../../assets';
 import { Picker } from '@react-native-picker/picker';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function CommnunityEditPage({ navigation, route }) {
     const { postId } = route.params;
@@ -34,8 +35,6 @@ export default function CommnunityEditPage({ navigation, route }) {
         '서울', '부산', '대구', '인천', '광주', '대전', '울산',
         '세종', '제주', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남',
     ];
-
-    const BASE_URL = 'http://localhost:8080';
 
     useEffect(() => {
         fetchPostDetail();

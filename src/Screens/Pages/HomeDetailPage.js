@@ -15,6 +15,7 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-nat
 import { Alert } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { BASE_URL } from '@env';
 
 export default function HomeDetailPage({ navigation, route }) {
     const { postId } = route.params;
@@ -23,7 +24,6 @@ export default function HomeDetailPage({ navigation, route }) {
     const [showOptions, setShowOptions] = useState(false);
     const [myUserId, setMyUserId] = useState(null);
 
-    const BASE_URL = 'http://localhost:8080';
 
     useEffect(() => {
         fetchPostDetail();

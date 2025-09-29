@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { BASE_URL } from '@env';
 
 export default function FreeBoardDetailPage({ route, navigation }) {
     const { postId } = route.params;
@@ -19,9 +20,6 @@ export default function FreeBoardDetailPage({ route, navigation }) {
     const [showOptions, setShowOptions] = useState(false);
     const [myUserId, setMyUserId] = useState(null);
     const [visibleOptionId, setVisibleOptionId] = useState(null);
-
-    const BASE_URL = 'http://localhost:8080';
-
 
     useEffect(() => {
         fetchPostDetail();

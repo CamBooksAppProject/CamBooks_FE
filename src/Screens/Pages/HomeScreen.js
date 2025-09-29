@@ -16,12 +16,11 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { BASE_URL } from '@env';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [items, setItems] = useState([]);
-  const BASE_URL = 'http://localhost:8080';
-
 
   useFocusEffect(
     useCallback(() => {

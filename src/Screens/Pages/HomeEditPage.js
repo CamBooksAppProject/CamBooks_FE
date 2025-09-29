@@ -12,11 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import IMAGES from "../../../assets";
+import { BASE_URL } from '@env';
 
 export default function HomeEditPage({ navigation, route }) {
     const { postId } = route.params;
-    const BASE_URL = 'http://localhost:8080';
-
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [price, setPrice] = useState('');

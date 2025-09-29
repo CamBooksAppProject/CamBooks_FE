@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import IMAGES from '../../../assets';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function FreeBoardEditPage({ navigation, route }) {
     const { postId } = route.params;
@@ -21,8 +22,6 @@ export default function FreeBoardEditPage({ navigation, route }) {
     const [content, setContent] = useState('');
     const [contentAlertShown, setContentAlertShown] = useState(false);
     const [loading, setLoading] = useState(true);
-
-    const BASE_URL = 'http://localhost:8080';
 
     useEffect(() => {
         fetchPostDetail();

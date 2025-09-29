@@ -7,10 +7,10 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-nat
 import { Alert } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { BASE_URL } from '@env';
 
 export default function CommuDetailPage({ navigation, route }) {
     const { postId } = route.params;
-    const BASE_URL = 'http://localhost:8080';
 
     const [post, setPost] = useState(null);
     const [comments, setComments] = useState([]);
