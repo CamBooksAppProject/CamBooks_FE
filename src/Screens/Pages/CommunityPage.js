@@ -69,7 +69,7 @@ export default function CommunScreen() {
     const fetchCommentCount = async (postId) => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:8080/cambooks/community/comment/count?postId=${postId}`, {
+            const res = await fetch(`${BASE_URL}/cambooks/community/comment/count?postId=${postId}`, {
                 headers: {
                     'Accept': 'application/json',
                     ...(token && { Authorization: `Bearer ${token}` }),
@@ -89,7 +89,7 @@ export default function CommunScreen() {
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) throw new Error("로그인이 필요합니다.");
 
-            const response = await fetch("http://localhost:8080/cambooks/community", {
+            const response = await fetch(`${BASE_URL}/cambooks/community`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`,

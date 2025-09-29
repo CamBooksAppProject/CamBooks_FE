@@ -14,16 +14,17 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import IMAGES from '../../../assets';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Picker } from '@react-native-picker/picker';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import { BASE_URL } from '@env';
 
 export default function CommuPostPage({ navigation }) {
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
     const [selectedPeople, setSelectedPeople] = useState("1");
-    const [photo, setPhoto] = useState(null);  // 단일 사진 상태
+    const [images, setImages] = useState([]);
     const [title, setTitle] = useState('');
     const [contentRecruit, setContentRecruit] = useState('');
     const [contentIntroduce, setContentIntroduce] = useState('');
@@ -36,68 +37,66 @@ export default function CommuPostPage({ navigation }) {
         '세종', '제주', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남',
     ];
 
-    const handleSelectPhoto = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            const selectedUri = result.assets[0].uri;
-            setPhoto({ uri: selectedUri });
+    const handleSelectImage = async () => {
+        if (images.length >= 1) {
+            Alert.alert("사진은 최대 1장까지 등록 가능합니다.");
+            return;
         }
-    };
 
-    const handleTakePhoto = async () => {
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            const photoUri = result.assets[0].uri;
-            setPhoto({ uri: photoUri });
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+            Alert.alert("권한이 필요합니다", "사진첩 접근 권한을 허용해주세요.");
+            return;
         }
-    };
 
-    const removeImage = () => {
-        setPhoto(null);
-    };
-    const handleSubmit = async () => {
         try {
-            const url = 'http://localhost:8080/cambooks/community';
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images"],
+                allowsMultipleSelection: true,
+                allowsEditing: false,
+                quality: 1,
+            });
+
+            if (!result.canceled) {
+                const selectedUris = result.assets.map((asset) => asset.uri);
+
+                const allowedCount = Math.min(1 - images.length, selectedUris.length);
+                if (allowedCount < selectedUris.length) {
+                    Alert.alert("사진은 최대 1장까지 등록 가능합니다.");
+                }
+
+                const allowedUris = selectedUris.slice(0, allowedCount);
+                setImages([...images, ...allowedUris.map(uri => ({ uri }))]);
+            }
+        } catch (e) {
+            console.log("사진첩 열기 에러:", e);
+        }
+    };
+
+
+    const removeImage = (index) => {
+        setImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSubmit = async () => {
+
+        try {
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) throw new Error('로그인이 필요합니다.');
 
             if (!title.trim() || !contentRecruit.trim() || !contentIntroduce.trim()) {
-                alert('제목, 모집 공고, 동아리 소개를 모두 입력하세요.');
-                return;
+                return Alert.alert('제목, 모집 공고, 동아리 소개를 모두 입력하세요.');
             }
 
-            if (!photo) {
-                alert('사진을 반드시 첨부해야 합니다.');
-                return;
+            if (images.length === 0) {
+                return Alert.alert('사진을 반드시 첨부해야 합니다.');
             }
 
             const regionMap = {
-                '서울': 'SEOUL',
-                '부산': 'BUSAN',
-                '대구': 'DAEGU',
-                '인천': 'INCHEON',
-                '광주': 'GWANGJU',
-                '대전': 'DAEJEON',
-                '울산': 'ULSAN',
-                '세종': 'SEJONG',
-                '제주': 'JEJU',
-                '경기': 'GYEONGGI',
-                '강원': 'GANGWON',
-                '충북': 'CHUNGBUK',
-                '충남': 'CHUNGNAM',
-                '전북': 'JEONBUK',
-                '전남': 'JEONNAM',
-                '경북': 'GYEONGBUK',
+                '서울': 'SEOUL', '부산': 'BUSAN', '대구': 'DAEGU', '인천': 'INCHEON',
+                '광주': 'GWANGJU', '대전': 'DAEJEON', '울산': 'ULSAN', '세종': 'SEJONG',
+                '제주': 'JEJU', '경기': 'GYEONGGI', '강원': 'GANGWON', '충북': 'CHUNGBUK',
+                '충남': 'CHUNGNAM', '전북': 'JEONBUK', '전남': 'JEONNAM', '경북': 'GYEONGBUK',
                 '경남': 'GYEONGNAM',
             };
 
@@ -111,39 +110,30 @@ export default function CommuPostPage({ navigation }) {
                 endDateTime: endDate.toISOString(),
             };
 
-            // 1. JSON DTO 파일 생성 (임시 캐시 경로)
             const dtoFileUri = FileSystem.cacheDirectory + 'community_dto.json';
-            await FileSystem.writeAsStringAsync(dtoFileUri, JSON.stringify(dto), {
-                encoding: FileSystem.EncodingType.UTF8,
-            });
+            await FileSystem.writeAsStringAsync(dtoFileUri, JSON.stringify(dto), { encoding: 'utf8' });
 
-            // 2. FormData 구성
             const formData = new FormData();
-
             formData.append('dto', {
                 uri: dtoFileUri,
                 name: 'community_dto.json',
                 type: 'application/json',
             });
 
-            // 이미지 첨부 (1장)
-            const uri = photo.uri;
-            const filename = uri.split('/').pop() || 'photo.jpg';
-            const ext = filename.split('.').pop().toLowerCase();
-            const type = ext === 'png' ? 'image/png' : 'image/jpeg';
-
-            formData.append('images', {
-                uri,
-                name: filename,
-                type,
+            images.forEach((img, i) => {
+                const uri = img.uri;
+                const filename = uri.split('/').pop() || `photo_${i}.jpg`;
+                const ext = filename.split('.').pop().toLowerCase();
+                const type = ext === 'png' ? 'image/png' : 'image/jpeg';
+                formData.append('images', { uri, name: filename, type });
             });
 
-            // 3. 서버 요청
+            const url = `${BASE_URL}/cambooks/community`;
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
-                    // Content-Type 생략 → fetch가 자동 설정
                 },
                 body: formData,
             });
@@ -151,23 +141,17 @@ export default function CommuPostPage({ navigation }) {
             if (!response.ok) {
                 const text = await response.text();
                 console.error('서버 응답:', text);
-                alert('작성에 실패했습니다.');
-                return;
+                return Alert.alert('작성에 실패했습니다.');
             }
 
-            const data = await response.json();
-            console.log('커뮤니티 작성 성공:', data);
-
-            // 4. 페이지 이동
             navigation.navigate('RouteScreen', {
                 screen: 'CommunityScreen',
                 params: { selectedTab: '커뮤니티' },
             });
 
-
         } catch (error) {
-            console.error('작성 실패:', error.message);
-            alert('작성 중 문제가 발생했습니다.');
+            console.error('작성 실패:', error);
+            Alert.alert('작성 중 문제가 발생했습니다.', error.message);
         }
     };
 
@@ -189,33 +173,29 @@ export default function CommuPostPage({ navigation }) {
                 <ScrollView>
 
                     <View style={[styles.photoContainer, { marginBottom: hp(2) }]}>
-                        <TouchableOpacity style={styles.photoEdit} onPress={handleTakePhoto}>
-                            <FontAwesome name="camera" size={wp(5)} color="black" />
-                            <Text style={styles.photoText}>카메라</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.photoEdit, { marginLeft: wp(3) }]} onPress={handleSelectPhoto}>
+                        <TouchableOpacity style={[styles.photoEdit, { marginLeft: wp(3) }]} onPress={handleSelectImage}>
                             <FontAwesome name="image" size={wp(5)} color="black" />
-                            <Text style={styles.photoText}>{photo ? 1 : 0}/1</Text>
+                            <Text style={styles.photoText}>{images.length}/1</Text>
                         </TouchableOpacity>
                     </View>
 
                     <Text style={styles.photoHint}>사진을 1장만 첨부할 수 있습니다.</Text>
 
-                    <View style={styles.photoPreview}>
-                        {photo ? (
-                            <View style={styles.imageWrapper}>
+                    <View style={styles.imagePreviewContainer}>
+                        {images.map((image, index) => (
+                            <View key={index} style={styles.imageWrapper}>
                                 <Image
-                                    source={{ uri: photo.uri }}
-                                    style={styles.photoImage}
+                                    source={{ uri: image.uri }}
+                                    style={styles.imageBox}
                                 />
                                 <TouchableOpacity
-                                    onPress={removeImage}
+                                    onPress={() => removeImage(index)}
                                     style={styles.removeBtn}
                                 >
                                     <FontAwesome name="close" size={12} color="white" />
                                 </TouchableOpacity>
                             </View>
-                        ) : null}
+                        ))}
                     </View>
 
                     <View style={styles.titleEdit}>
@@ -362,6 +342,19 @@ const styles = StyleSheet.create({
         marginRight: wp('2%'),
         marginBottom: wp('2%'),
     },
+    imageBox: {
+        width: wp('18%'),
+        height: wp('18%'),
+        borderRadius: 8,
+    },
+    removeBtn: {
+        position: 'absolute',
+        top: -6,
+        right: -6,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        borderRadius: 10,
+        padding: 3,
+    },
     photoEdit: {
         justifyContent: 'center',
         alignItems: 'center',
@@ -372,12 +365,12 @@ const styles = StyleSheet.create({
         borderRadius: wp(3),
     },
     photoText: { fontSize: wp(3), marginTop: 4 },
-    photoHint: { fontSize: wp(3), color: 'gray', marginLeft: wp(5), marginBottom: hp(2) },
-    photoPreview: {
+    photoHint: { fontSize: wp(3), color: 'gray', marginLeft: wp(5) },
+    imagePreviewContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: hp(3),
-        marginHorizontal: wp(5),
+        marginTop: hp('1%'),
+        marginHorizontal: wp('5%'),
     },
     photoImage: {
         width: wp(20),
@@ -401,6 +394,7 @@ const styles = StyleSheet.create({
         borderColor: 'gray',
         borderWidth: 0.5,
         borderRadius: wp(3),
+        marginTop: hp(1),
         marginBottom: hp(3),
     },
     titleInput: { marginLeft: wp(5) },

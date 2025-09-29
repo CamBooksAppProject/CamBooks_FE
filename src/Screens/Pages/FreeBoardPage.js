@@ -15,6 +15,7 @@ import {
 import IMAGES from '../../../assets';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function FreeBoardPage() {
     const navigation = useNavigation();
@@ -30,7 +31,7 @@ export default function FreeBoardPage() {
         try {
             const token = await AsyncStorage.getItem('accessToken');
 
-            const response = await fetch('http://localhost:8080/cambooks/general-forum', {
+            const response = await fetch(`${BASE_URL}/cambooks/general-forum`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -62,7 +63,7 @@ export default function FreeBoardPage() {
     const fetchCommentCount = async (postId) => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:8080/cambooks/general-forum/comment/count?postId=${postId}`, {
+            const res = await fetch(`${BASE_URL}/cambooks/general-forum/comment/count?postId=${postId}`, {
                 headers: {
                     'Accept': 'application/json',
                     ...(token && { Authorization: `Bearer ${token}` }),

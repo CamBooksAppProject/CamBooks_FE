@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import IMAGES from '../../../assets';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function FreeBoardPostPage({ navigation }) {
     const [title, setTitle] = useState('');
@@ -28,7 +29,7 @@ export default function FreeBoardPostPage({ navigation }) {
         try {
             const token = await AsyncStorage.getItem('accessToken');
 
-            const response = await fetch('http://localhost:8080/cambooks/general-forum', {
+            const response = await fetch(`${BASE_URL}/cambooks/general-forum`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

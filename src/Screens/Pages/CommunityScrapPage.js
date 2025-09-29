@@ -39,7 +39,7 @@ export default function CommunScreen() {
     const fetchCommentCount = async (postId) => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:8080/cambooks/community/comment/count?postId=${postId}`, {
+            const res = await fetch(`${BASE_URL}/cambooks/community/comment/count?postId=${postId}`, {
                 headers: {
                     'Accept': 'application/json',
                     ...(token && { Authorization: `Bearer ${token}` }),

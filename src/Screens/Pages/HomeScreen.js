@@ -38,10 +38,10 @@ export default function HomeScreen() {
 
       if (!token) throw new Error("로그인이 필요합니다.");
 
-      const response = await fetch("http://localhost:8080/cambooks/used-trade", {
+      const response = await fetch(`${BASE_URL}/cambooks/used-trade`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
