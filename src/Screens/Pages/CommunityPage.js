@@ -177,7 +177,7 @@ export default function CommunScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={{ height: hp(3), paddingHorizontal: wp(5.5), marginTop: hp(1) }}>
+            <View style={{ height: hp(4), paddingHorizontal: wp(5.5), marginTop: hp(1) }}>
                 <FlatList
                     data={regions}
                     horizontal
@@ -213,7 +213,7 @@ export default function CommunScreen() {
                     justifyContent: 'flex-start',
                     gap: wp(4),
                     paddingHorizontal: wp(5),
-                    paddingTop: hp(2),
+                    paddingTop: hp(1),
                 }}
                 ListEmptyComponent={
                     <Text style={styles.emptyText}>데이터 없음</Text>

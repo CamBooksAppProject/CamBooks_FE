@@ -5,10 +5,10 @@ import {
     View,
     TouchableOpacity,
     Image,
-    SafeAreaView,
     Text,
     ScrollView,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import IMAGES from "../../../assets";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
@@ -194,7 +194,7 @@ export default function HomeDetailPage({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
@@ -365,7 +365,7 @@ export default function HomeDetailPage({ navigation, route }) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "white" },
     topView: {
-        height: hp('10%'),
+        height: hp(5),
         justifyContent: 'center',
     },
     middleView: {

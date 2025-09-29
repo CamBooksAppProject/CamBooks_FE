@@ -1,5 +1,6 @@
-import { StyleSheet, View, TouchableOpacity, Image, SafeAreaView, Text, ScrollView, TextInput } from 'react-native';
 import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, TouchableOpacity, Image, Text, ScrollView, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import IMAGES from '../../../assets';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
@@ -369,7 +370,7 @@ export default function CommuDetailPage({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 15 }}>
                     <Image source={IMAGES.BACK} resizeMode="contain" tintColor="#474747" style={{ width: 25, height: 25 }} />
@@ -664,14 +665,13 @@ const styles = StyleSheet.create({
     },
     topView: {
         backgroundColor: 'white',
-        width: '100%',
-        height: '10%',
+        height: hp(5),
         justifyContent: 'center',
     },
     middleView: {
         backgroundColor: 'white',
-        width: '100%',
-        height: '73%',
+        height: hp(75),
+        marginTop: hp(2)
     },
     titleFont: {
         fontSize: 22,

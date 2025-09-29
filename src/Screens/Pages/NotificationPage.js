@@ -1,8 +1,9 @@
-import { StyleSheet, View, TouchableOpacity, Image, SafeAreaView, ScrollView, FlatList, Text } from 'react-native';
 import React from 'react';
-
-
-
+import { StyleSheet, View, TouchableOpacity, Image, FlatList, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+    widthPercentageToDP as wp, heightPercentageToDP as hp,
+} from "react-native-responsive-screen";
 import IMAGES from '../../../assets';
 
 const DATA = new Array(5).fill(0).map((_, index) => ({ id: index }));
@@ -12,7 +13,7 @@ export default function NotificationPage({ navigation }) {
     return (
         <View style={styles.container}>
 
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.navigate("RouteScreen")} style={{ marginLeft: 15 }}>
                     <Image
@@ -59,8 +60,7 @@ const styles = StyleSheet.create({
     },
     topView: {
         backgroundColor: 'white',
-        width: '100%',
-        height: '10%',
+        height: hp(5),
         justifyContent: 'center',
     },
     middleView: {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-    StyleSheet, View, TouchableOpacity, Image, SafeAreaView,
+    StyleSheet, View, TouchableOpacity, Image,
     Text, ScrollView, TextInput, Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import IMAGES from '../../../assets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
@@ -277,7 +278,7 @@ export default function FreeBoardDetailPage({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 15 }}>
                     <Image source={IMAGES.BACK} resizeMode="contain" tintColor="#474747" style={{ width: 25, height: 25 }} />
@@ -455,14 +456,12 @@ const styles = StyleSheet.create({
     },
     topView: {
         backgroundColor: 'white',
-        width: '100%',
-        height: '10%',
+        height: hp(5),
         justifyContent: 'center',
     },
     middleView: {
         backgroundColor: 'white',
-        width: '100%',
-        height: '73%',
+        height: hp(75),
     },
     nameFont: {
         fontSize: 15,

@@ -7,9 +7,9 @@ import {
     TextInput,
     Text,
     ScrollView,
-    SafeAreaView,
     Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import IMAGES from '../../../assets';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -173,7 +173,7 @@ export default function CommuPostPage({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.navigate("RouteScreen")} style={{ marginLeft: wp(4) }}>
                     <Image
@@ -342,8 +342,8 @@ export default function CommuPostPage({ navigation }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: 'white' },
-    topView: { height: hp('10%'), justifyContent: 'center' },
-    middleView: { flex: 1, backgroundColor: 'white' },
+    topView: { height: hp(5), justifyContent: 'center' },
+    middleView: { flex: 1, backgroundColor: 'white', marginTop: hp(2) },
     bottomView: {
         height: hp('8%'),
         justifyContent: 'center',

@@ -1,14 +1,12 @@
 import React from "react";
 import {
-  StatusBar,
   StyleSheet,
   View,
   Text,
   Image,
-  Platform,
-  SafeAreaView,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
   widthPercentageToDP as wp,
@@ -28,8 +26,8 @@ import ProfileScreen from "../Screens/Pages/ProfileScreen";
 const BottomTab = createBottomTabNavigator();
 
 const Header = ({ name, navigation }) => (
-  <SafeAreaView style={{ backgroundColor: "white" }}>
-    <View style={styles.header}>
+  <SafeAreaView style={{ backgroundColor: "white" }} edges={['top']}>
+    < View style={styles.header} >
       {name === "중고거래" ? (
         <View style={styles.topContainer}>
           <Text style={styles.topFont}>중고거래</Text>
@@ -123,8 +121,8 @@ const Header = ({ name, navigation }) => (
           </View>
         </View>
       )}
-    </View>
-  </SafeAreaView>
+    </View >
+  </SafeAreaView >
 );
 
 const BottomTabIcon = (name, focused) => {
@@ -190,8 +188,7 @@ export default function RouteScreen({ navigation }) {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: "white",
-    width: wp(95),
-    height: hp(10),
+    height: hp(5),
     flexDirection: "row",
     alignSelf: "center",
     alignItems: "center",
