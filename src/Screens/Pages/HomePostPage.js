@@ -85,6 +85,48 @@ export default function HomePostPage({ navigation }) {
         setImages(prev => prev.filter((_, i) => i !== index));
     };
 
+    const fetchBookByISBN = async (isbn) => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error('로그인이 필요합니다.');
+
+            const url = `${BASE_URL}/search/isbn?isbn=${isbn}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`서버 에러: ${text}`);
+            }
+
+            const data = await response.json();
+
+            // 필요한 필드만 추출
+            if (data.items && data.items.length > 0) {
+                const book = data.items[0];
+                return {
+                    title: book.title,
+                    author: book.author,
+                    publisher: book.publisher,
+                    discount: book.discount,
+                    image: book.image,
+                    isbn: book.isbn,
+                };
+            } else {
+                return null;
+            }
+        } catch (e) {
+            console.error('책 정보 가져오기 실패:', e);
+            return null;
+        }
+    };
+
+
     const postTrade = async () => {
         try {
             const memberId = await AsyncStorage.getItem('userId');
@@ -106,54 +148,79 @@ export default function HomePostPage({ navigation }) {
                 return Alert.alert('거래 방식을 선택해주세요. (직거래 또는 택배거래)');
             if (isbn && !isValidISBN(isbn))
                 return Alert.alert('유효하지 않은 ISBN입니다. 10자리 또는 13자리 숫자를 입력하세요.');
-            if (images.length === 0)
-                return Alert.alert('최소 1장의 사진을 반드시 첨부해야 합니다.');
-
-            const dto = {
-                title: title.trim(),
-                content: content.trim(),
-                price: Number(price),
-                tradeMethod,
-                isbn: isbn.trim(),
-            };
-
-            const dtoFileUri = FileSystem.cacheDirectory + 'dto.json';
-            await FileSystem.writeAsStringAsync(dtoFileUri, JSON.stringify(dto), { encoding: FileSystem.EncodingType.UTF8 });
-
-            const formData = new FormData();
-            formData.append('dto', {
-                uri: dtoFileUri,
-                name: 'dto.json',
-                type: 'application/json',
-            });
-
-            images.forEach((img, i) => {
-                const uri = img.uri;
-                const filename = uri.split('/').pop() || `photo_${i}.jpg`;
-                const ext = filename.split('.').pop().toLowerCase();
-                const type = ext === 'png' ? 'image/png' : 'image/jpeg';
-
-                formData.append('images', { uri, name: filename, type });
-            });
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const text = await response.text();
-                console.error('서버 응답:', text);
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (images.length < 2) {
+                return Alert.alert('최소 2장의 사진을 반드시 첨부해야 합니다.');
             }
 
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'RouteScreen', state: { routes: [{ name: 'HomeScreen' }] } }],
-            });
+
+            let bookInfo = null;
+            if (isbn) {
+                bookInfo = await fetchBookByISBN(isbn);
+            }
+
+
+            Alert.alert(
+                '네이버 최저가 확인',
+                bookInfo?.title
+                    ? `책 제목: ${bookInfo.title}\n네이버 최저가: ${bookInfo.discount ? `${Number(bookInfo.discount).toLocaleString()}원` : ''}`
+                    : '최저가 정보를 찾을 수 없습니다.\n그래도 등록하시겠습니까?',
+                [
+                    {
+                        text: '취소',
+                        style: 'cancel',
+                        onPress: () => console.log('게시글 전송 취소'),
+                    },
+                    {
+                        text: '확인',
+                        onPress: async () => {
+                            const dto = {
+                                title: title.trim(),
+                                content: content.trim(),
+                                price: Number(price),
+                                tradeMethod,
+                                isbn: isbn.trim(),
+                            };
+
+                            const dtoFileUri = FileSystem.cacheDirectory + 'dto.json';
+                            await FileSystem.writeAsStringAsync(dtoFileUri, JSON.stringify(dto), {
+                                encoding: FileSystem.EncodingType.UTF8,
+                            });
+
+                            const formData = new FormData();
+                            formData.append('dto', {
+                                uri: dtoFileUri,
+                                name: 'dto.json',
+                                type: 'application/json',
+                            });
+
+                            images.forEach((img, i) => {
+                                const uri = img.uri;
+                                const filename = uri.split('/').pop() || `photo_${i}.jpg`;
+                                const ext = filename.split('.').pop().toLowerCase();
+                                const type = ext === 'png' ? 'image/png' : 'image/jpeg';
+                                formData.append('images', { uri, name: filename, type });
+                            });
+
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: { Authorization: `Bearer ${token}` },
+                                body: formData,
+                            });
+
+                            if (!response.ok) {
+                                const text = await response.text();
+                                console.error('서버 응답:', text);
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'RouteScreen', state: { routes: [{ name: 'HomeScreen' }] } }],
+                            });
+                        },
+                    },
+                ]
+            );
         } catch (e) {
             console.error('postTrade 에러:', e);
             Alert.alert('오류 발생', e.message);

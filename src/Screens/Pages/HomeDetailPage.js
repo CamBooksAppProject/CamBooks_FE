@@ -24,16 +24,11 @@ export default function HomeDetailPage({ navigation, route }) {
     const [showOptions, setShowOptions] = useState(false);
     const [myUserId, setMyUserId] = useState(null);
 
-
-    useEffect(() => {
-        fetchPostDetail();
-        loadHeartStatus();
-        loadMyUserId();
-    }, []);
-
     useFocusEffect(
         useCallback(() => {
             fetchPostDetail();
+            loadHeartStatus();
+            loadMyUserId();
         }, [postId])
     );
 
@@ -55,7 +50,17 @@ export default function HomeDetailPage({ navigation, route }) {
             const data = await response.json();
             console.log("post data:", data);
 
-            setPost(data);
+            let bookInfo = null;
+            if (data.isbn) {
+                bookInfo = await fetchBookByISBN(data.isbn);
+                console.log("book info:", bookInfo);
+            }
+
+            setPost({
+                ...data,
+                bookInfo,
+            });
+
         } catch (error) {
             console.error("상세 API 오류:", error);
         }
@@ -137,6 +142,48 @@ export default function HomeDetailPage({ navigation, route }) {
             console.error("userId 로드 실패:", e);
         }
     };
+
+    const fetchBookByISBN = async (isbn) => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error('로그인이 필요합니다.');
+
+            const url = `${BASE_URL}/search/isbn?isbn=${isbn}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`서버 에러: ${text}`);
+            }
+
+            const data = await response.json();
+
+            // 필요한 필드만 추출
+            if (data.items && data.items.length > 0) {
+                const book = data.items[0];
+                return {
+                    title: book.title,
+                    author: book.author,
+                    publisher: book.publisher,
+                    discount: book.discount,
+                    image: book.image,
+                    isbn: book.isbn,
+                };
+            } else {
+                return null;
+            }
+        } catch (e) {
+            console.error('책 정보 가져오기 실패:', e);
+            return null;
+        }
+    };
+
 
 
     const handleDeleteAlert = () => {
@@ -306,6 +353,36 @@ export default function HomeDetailPage({ navigation, route }) {
 
                         <Text style={styles.contentsFont}>{post.content}</Text>
 
+                        {post.bookInfo && (
+                            <View style={styles.naverBox}>
+                                <Text style={styles.naverHeader}>네이버 정보</Text>
+
+                                <View style={styles.naverRow}>
+                                    {post.bookInfo.image && (
+                                        <Image
+                                            source={{ uri: post.bookInfo.image }}
+                                            style={styles.bookImage}
+                                            resizeMode="cover"
+                                        />
+                                    )}
+                                    <View style={styles.naverInfo}>
+                                        {post.bookInfo.title && (
+                                            <Text style={styles.naverText}>제목: {post.bookInfo.title}</Text>
+                                        )}
+                                        {post.bookInfo.author && (
+                                            <Text style={styles.naverText}>저자: {post.bookInfo.author}</Text>
+                                        )}
+                                        {post.bookInfo.publisher && (
+                                            <Text style={styles.naverText}>출판사: {post.bookInfo.publisher}</Text>
+                                        )}
+                                        {post.bookInfo.isbn && (
+                                            <Text style={styles.naverText}>ISBN: {post.bookInfo.isbn}</Text>
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+
                         <View
                             style={{
                                 flexDirection: "row",
@@ -333,31 +410,39 @@ export default function HomeDetailPage({ navigation, route }) {
             </View>
 
             <View style={styles.bottomView}>
-                <TouchableOpacity style={styles.heartBtnView}
-                    onPress={handleHeartPress}>
-                    <Image
-                        source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
-                        resizeMode="contain"
-                        style={{ width: 20, height: 20 }}
-                    />
-                </TouchableOpacity>
-                <View style={{ marginLeft: 10, marginBottom: hp('1%') }}>
-                    <Text style={styles.priceFont}>
-                        {typeof post.price === "number"
-                            ? `${post.price.toLocaleString()}원`
-                            : post.price}
-                    </Text>
+                <View style={styles.leftGroup}>
+                    <TouchableOpacity style={styles.heartBtnView} onPress={handleHeartPress}>
+                        <Image
+                            source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
+                            resizeMode="contain"
+                            style={{ width: 20, height: 20 }}
+                        />
+                    </TouchableOpacity>
+                    <View style={{ marginLeft: 10 }}>
+                        <Text style={styles.priceFont}>
+                            {post.price?.toLocaleString()}원
+                        </Text>
+                        {post.bookInfo?.discount && (
+                            <Text style={styles.discountFont}>
+                                네이버 최저가: {Number(post.bookInfo.discount).toLocaleString()}원
+                            </Text>
+                        )}
+                    </View>
                 </View>
-                <TouchableOpacity style={styles.chatBtnView}>
-                    <Image
-                        source={IMAGES.CHAT}
-                        resizeMode="contain"
-                        tintColor="white"
-                        style={{ width: 30, height: 30 }}
-                    />
-                    <Text style={styles.chatFont}>채팅하기</Text>
-                </TouchableOpacity>
+
+                <View style={styles.rightGroup}>
+                    <TouchableOpacity style={styles.chatBtnView}>
+                        <Image
+                            source={IMAGES.CHAT}
+                            resizeMode="contain"
+                            tintColor="white"
+                            style={{ width: 30, height: 30 }}
+                        />
+                        <Text style={styles.chatFont}>채팅하기</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
+
         </View>
     );
 }
@@ -423,8 +508,8 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "#111",
     },
-    lowPriceFont: {
-        fontSize: wp("3.2%"),
+    discountFont: {
+        fontSize: wp("4%"),
         fontWeight: "bold",
         color: "#888",
     },
@@ -432,11 +517,23 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         backgroundColor: "white",
         width: "100%",
-        height: hp('8%'),
+        height: hp('10%'),
         alignItems: "center",
-        justifyContent: "space-evenly",
+        justifyContent: "flex-start",
         borderTopWidth: 0.5,
         borderTopColor: "gray",
+    },
+
+    leftGroup: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginLeft: wp('5%'),
+    },
+    rightGroup: {
+        flexDirection: "row",
+        alignItems: "center",
+        position: "absolute",
+        right: wp('5%'),
     },
     heartBtnView: {
         backgroundColor: "white",
@@ -447,7 +544,6 @@ const styles = StyleSheet.create({
         borderColor: "gray",
         borderWidth: 0.2,
         borderRadius: wp("3%"),
-        marginBottom: hp('1%'),
     },
     chatBtnView: {
         backgroundColor: "#67574D",
@@ -455,10 +551,8 @@ const styles = StyleSheet.create({
         height: hp("5%"),
         justifyContent: "space-evenly",
         alignItems: "center",
-        marginLeft: wp("3.5%"),
         borderRadius: wp("3%"),
         flexDirection: "row",
-        marginBottom: hp('1%'),
     },
     chatFont: {
         color: "white",
@@ -488,6 +582,38 @@ const styles = StyleSheet.create({
     popupDivider: {
         height: 1,
         backgroundColor: '#ddd',
-    }
+    },
+    naverBox: {
+        backgroundColor: "white",
+        borderRadius: 12,
+        padding: 12,
+        marginTop: 20,
+        borderWidth: 1,
+        borderColor: "#ddd",
+    },
+    naverHeader: {
+        fontSize: 16,
+        fontWeight: "bold",
+        marginBottom: 8,
+        color: "#333",
+    },
+    naverRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+    },
+    bookImage: {
+        width: 80,
+        height: 110,
+        borderRadius: 6,
+        marginRight: 12,
+    },
+    naverInfo: {
+        flex: 1,
+    },
+    naverText: {
+        fontSize: 14,
+        marginBottom: 6,
+        color: "#444",
+    },
 
 });
