@@ -48,12 +48,10 @@ export default function HomeDetailPage({ navigation, route }) {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
-            console.log("post data:", data);
 
             let bookInfo = null;
             if (data.isbn) {
                 bookInfo = await fetchBookByISBN(data.isbn);
-                console.log("book info:", bookInfo);
             }
 
             setPost({
@@ -71,7 +69,6 @@ export default function HomeDetailPage({ navigation, route }) {
         try {
             const key = `liked_usedTrade_${postId}`;
             const saved = await AsyncStorage.getItem(key);
-            console.log('좋아요 상태 불러오기:', saved);
             setIsHeartFilled(saved === 'true');
         } catch (e) {
             console.error('좋아요 상태 불러오기 실패:', e);
@@ -137,7 +134,6 @@ export default function HomeDetailPage({ navigation, route }) {
             const userIdStr = await AsyncStorage.getItem('userId');
             if (!userIdStr) return;
             setMyUserId(Number(userIdStr));
-            console.log("내 userId:", userIdStr);
         } catch (e) {
             console.error("userId 로드 실패:", e);
         }
@@ -222,7 +218,6 @@ export default function HomeDetailPage({ navigation, route }) {
 
             if (!response.ok) throw new Error("삭제 실패");
 
-            console.log("삭제 완료");
             navigation.goBack(); // 삭제 후 뒤로가기
         } catch (e) {
             console.error("삭제 오류:", e);
@@ -297,43 +292,31 @@ export default function HomeDetailPage({ navigation, route }) {
                                 <View style={styles.popup}>
                                     <TouchableOpacity onPress={() => {
                                         setShowOptions(false);
-                                        console.log("신고하기");
+                                        navigation.navigate('HomeEditPage', { postId });
                                     }}>
-                                        <Text style={styles.popupItem}>신고하기</Text>
+                                        <Text style={styles.popupItem}>수정하기</Text>
                                     </TouchableOpacity>
 
-                                    {myUserId === post.userId && (
-                                        <>
-                                            <View style={styles.popupDivider} />
-                                            <TouchableOpacity onPress={() => {
-                                                setShowOptions(false);
-                                                navigation.navigate('HomeEditPage', { postId });
-                                            }}>
-                                                <Text style={styles.popupItem}>수정하기</Text>
-                                            </TouchableOpacity>
+                                    <View style={styles.popupDivider} />
 
-                                            <View style={styles.popupDivider} />
-
-                                            <TouchableOpacity onPress={() => {
-                                                setShowOptions(false);
-                                                handleDeleteAlert();
-                                            }}>
-                                                <Text style={styles.popupItem}>삭제하기</Text>
-                                            </TouchableOpacity>
-                                        </>
-                                    )}
+                                    <TouchableOpacity onPress={() => {
+                                        setShowOptions(false);
+                                        handleDeleteAlert();
+                                    }}>
+                                        <Text style={styles.popupItem}>삭제하기</Text>
+                                    </TouchableOpacity>
                                 </View>
                             )}
 
-
-
-                            <TouchableOpacity onPress={() => setShowOptions(!showOptions)}>
-                                <Image
-                                    source={IMAGES.THREEDOT}
-                                    resizeMode="contain"
-                                    style={{ height: 13, width: 13 }}
-                                />
-                            </TouchableOpacity>
+                            {myUserId === post.userId && (
+                                <TouchableOpacity onPress={() => setShowOptions(!showOptions)}>
+                                    <Image
+                                        source={IMAGES.THREEDOT}
+                                        resizeMode="contain"
+                                        style={{ height: 13, width: 13 }}
+                                    />
+                                </TouchableOpacity>
+                            )}
                         </View>
 
 

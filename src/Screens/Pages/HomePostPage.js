@@ -76,7 +76,7 @@ export default function HomePostPage({ navigation }) {
                 setImages([...images, ...allowedUris.map(uri => ({ uri }))]);
             }
         } catch (e) {
-            console.log("사진첩 열기 에러:", e);
+            console.error("사진첩 열기 에러:", e);
         }
     };
 
@@ -168,7 +168,6 @@ export default function HomePostPage({ navigation }) {
                     {
                         text: '취소',
                         style: 'cancel',
-                        onPress: () => console.log('게시글 전송 취소'),
                     },
                     {
                         text: '확인',

@@ -48,10 +48,6 @@ export default function FreeBoardPostPage({ navigation }) {
                 return;
             }
 
-            const result = await response.json();
-            console.log('작성 성공:', result);
-
-
             navigation.navigate('RouteScreen', {
                 screen: 'FreeBoardPage',
                 params: { selectedTab: '자유게시판' },

@@ -100,7 +100,6 @@ export default function CommuDetailPage({ navigation, route }) {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
-            console.log(' 받아온 post 데이터:', data);
             setPost(data);
         } catch (error) {
             console.error('상세 API 오류:', error);
@@ -197,8 +196,6 @@ export default function CommuDetailPage({ navigation, route }) {
             if (!res.ok) throw new Error("좋아요 토글 실패");
 
             const newState = !isHeartFilled;
-            console.log('좋아요 상태 토글, 이전:', isHeartFilled, '새로운:', newState);
-
             setIsHeartFilled(newState);
 
             if (newState) {
@@ -268,7 +265,6 @@ export default function CommuDetailPage({ navigation, route }) {
             const userIdStr = await AsyncStorage.getItem('userId');
             if (!userIdStr) return;
             setMyUserId(Number(userIdStr));
-            console.log("내 userId:", userIdStr);
         } catch (e) {
             console.error("userId 로드 실패:", e);
         }
@@ -328,8 +324,6 @@ export default function CommuDetailPage({ navigation, route }) {
             });
 
             if (!response.ok) throw new Error("삭제 실패");
-
-            console.log("삭제 완료");
             navigation.goBack();
         } catch (e) {
             console.error("삭제 오류:", e);
@@ -350,8 +344,6 @@ export default function CommuDetailPage({ navigation, route }) {
             });
 
             if (!res.ok && res.status !== 204) throw new Error(`삭제 실패: ${res.status}`);
-
-            console.log("댓글 삭제 완료");
             await fetchComments();
         } catch (e) {
             console.error("댓글 삭제 실패:", e);
@@ -393,9 +385,12 @@ export default function CommuDetailPage({ navigation, route }) {
                         <View style={{ flexDirection: 'column', marginLeft: 15, flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
                                 <Text style={styles.titleFont}>{post.title || '제목'}</Text>
-                                <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={() => setShowOptions(!showOptions)}>
-                                    <Image source={IMAGES.THREEDOT} resizeMode="contain" style={{ height: 12, width: 12 }} />
-                                </TouchableOpacity>
+
+                                {myUserId === post.userId && (
+                                    <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={() => setShowOptions(!showOptions)}>
+                                        <Image source={IMAGES.THREEDOT} resizeMode="contain" style={{ height: 12, width: 12 }} />
+                                    </TouchableOpacity>
+                                )}
                             </View>
 
 
@@ -403,31 +398,19 @@ export default function CommuDetailPage({ navigation, route }) {
                                 <View style={styles.popup}>
                                     <TouchableOpacity onPress={() => {
                                         setShowOptions(false);
-                                        console.log("신고하기");
+                                        navigation.navigate('CommunityEditPage', { postId });
                                     }}>
-                                        <Text style={styles.popupItem}>신고하기</Text>
+                                        <Text style={styles.popupItem}>수정하기</Text>
                                     </TouchableOpacity>
 
-                                    {myUserId === post.userId && (
-                                        <>
-                                            <View style={styles.popupDivider} />
-                                            <TouchableOpacity onPress={() => {
-                                                setShowOptions(false);
-                                                navigation.navigate('CommunityEditPage', { postId });
-                                            }}>
-                                                <Text style={styles.popupItem}>수정하기</Text>
-                                            </TouchableOpacity>
+                                    <View style={styles.popupDivider} />
 
-                                            <View style={styles.popupDivider} />
-
-                                            <TouchableOpacity onPress={() => {
-                                                setShowOptions(false);
-                                                handleDeleteAlert();
-                                            }}>
-                                                <Text style={styles.popupItem}>삭제하기</Text>
-                                            </TouchableOpacity>
-                                        </>
-                                    )}
+                                    <TouchableOpacity onPress={() => {
+                                        setShowOptions(false);
+                                        handleDeleteAlert();
+                                    }}>
+                                        <Text style={styles.popupItem}>삭제하기</Text>
+                                    </TouchableOpacity>
                                 </View>
                             )}
 
@@ -483,13 +466,8 @@ export default function CommuDetailPage({ navigation, route }) {
                             flexDirection: 'row',
                             alignItems: 'center',
                             marginTop: 25,
-                            paddingHorizontal: 20,
                         }}
                     >
-                        <TouchableOpacity>
-                            <Text style={{ fontSize: 11, color: 'gray' }}>신고하기</Text>
-                        </TouchableOpacity>
-
                         <TouchableOpacity
                             style={[styles.btn2, { backgroundColor: isJoined ? '#67574D' : '#67574D' }]}
                             onPress={handleJoinToggle}
@@ -528,40 +506,28 @@ export default function CommuDetailPage({ navigation, route }) {
 
                                         <View style={styles.commentRight}>
                                             <Text style={styles.commentTime}>{createdAtFormatted}</Text>
-
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    if (visibleOptionId === comment.id) {
-                                                        setVisibleOptionId(null);
-                                                    } else {
-                                                        setVisibleOptionId(comment.id);
-                                                    }
-                                                }}
-                                                style={{ padding: 5 }}
-                                            >
-                                                <Image source={IMAGES.THREEDOT} resizeMode="contain" style={{ height: 12, width: 12 }} />
-                                            </TouchableOpacity>
-
+                                            {isMyComment && (
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        if (visibleOptionId === comment.id) {
+                                                            setVisibleOptionId(null);
+                                                        } else {
+                                                            setVisibleOptionId(comment.id);
+                                                        }
+                                                    }}
+                                                    style={{ padding: 5 }}
+                                                >
+                                                    <Image source={IMAGES.THREEDOT} resizeMode="contain" style={{ height: 12, width: 12 }} />
+                                                </TouchableOpacity>
+                                            )}
                                             {visibleOptionId === comment.id && (
                                                 <View style={styles.popupComment}>
                                                     <TouchableOpacity onPress={() => {
                                                         setVisibleOptionId(null);
-                                                        console.log("신고하기");
+                                                        showDeleteCommentAlert(comment.id);
                                                     }}>
-                                                        <Text style={styles.popupItem}>신고하기</Text>
+                                                        <Text style={styles.popupItem}>삭제하기</Text>
                                                     </TouchableOpacity>
-
-                                                    {isMyComment && (
-                                                        <>
-                                                            <View style={styles.popupDivider} />
-                                                            <TouchableOpacity onPress={() => {
-                                                                setVisibleOptionId(null);
-                                                                showDeleteCommentAlert(comment.id);
-                                                            }}>
-                                                                <Text style={styles.popupItem}>삭제하기</Text>
-                                                            </TouchableOpacity>
-                                                        </>
-                                                    )}
                                                 </View>
                                             )}
                                         </View>

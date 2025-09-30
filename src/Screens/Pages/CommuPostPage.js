@@ -69,7 +69,7 @@ export default function CommuPostPage({ navigation }) {
                 setImages([...images, ...allowedUris.map(uri => ({ uri }))]);
             }
         } catch (e) {
-            console.log("사진첩 열기 에러:", e);
+            console.error("사진첩 열기 에러:", e);
         }
     };
 

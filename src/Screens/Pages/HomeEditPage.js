@@ -143,7 +143,6 @@ export default function HomeEditPage({ navigation, route }) {
                     {
                         text: '취소',
                         style: 'cancel',
-                        onPress: () => console.log('게시글 전송 취소'),
                     },
                     {
                         text: '확인',

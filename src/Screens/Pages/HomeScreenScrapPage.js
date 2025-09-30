@@ -38,11 +38,7 @@ export default function HomeScreenScrapPage() {
             });
 
             const likedData = await likedRes.json();
-            console.log("스크랩 데이터 전체:", likedData);
-
             const likedPosts = likedData["USED_TRADE"] || [];
-            console.log("좋아요 게시글 개수:", likedPosts.length);
-            console.log("좋아요 게시글 목록:", likedPosts);
 
             // id 중복 체크 (경고 로그 출력)
             const ids = likedPosts.map(post => post.id);
