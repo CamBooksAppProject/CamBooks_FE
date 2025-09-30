@@ -16,12 +16,26 @@ import { Alert } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { BASE_URL } from '@env';
+import { Feather } from '@expo/vector-icons';
+
+const statusDisplayMap = {
+    'AVAILABLE': { text: '판매중' },
+    'RESERVED': { text: '예약중' },
+    'COMPLETED': { text: '거래완료' },
+};
+
+const statusSendMAP = {
+    '판매중': 'AVAILABLE',
+    '예약중': 'RESERVED',
+    '거래완료': 'COMPLETED',
+};
 
 export default function HomeDetailPage({ navigation, route }) {
     const { postId } = route.params;
     const [post, setPost] = useState(null);
     const [isHeartFilled, setIsHeartFilled] = useState(false);
     const [showOptions, setShowOptions] = useState(false);
+    const [showStatusOptions, setShowStatusOptions] = useState(false);
     const [myUserId, setMyUserId] = useState(null);
 
     useFocusEffect(
@@ -218,12 +232,42 @@ export default function HomeDetailPage({ navigation, route }) {
 
             if (!response.ok) throw new Error("삭제 실패");
 
-            navigation.goBack(); // 삭제 후 뒤로가기
+            navigation.goBack();
         } catch (e) {
             console.error("삭제 오류:", e);
         }
     };
 
+    const handleStatusUpdate = async (statusText) => {
+
+        setShowStatusOptions(false);
+        if (statusText === '취소') {
+            return;
+        }
+
+        const statusKey = statusSendMAP[statusText];
+        if (!statusKey) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${BASE_URL}/cambooks/community/post/${postId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`상태 변경 실패: ${response.status} - ${errorData.message || response.statusText}`);
+            }
+
+
+        } catch (error) {
+            console.error("상태 변경 요청 중 에러 발생:", error.message);
+        }
+    };
 
 
     if (!post) {
@@ -275,7 +319,7 @@ export default function HomeDetailPage({ navigation, route }) {
                                 flexDirection: "row",
                                 alignItems: "center",
                                 marginBottom: 10,
-                                justifyContent: 'space-between', // 추가
+                                justifyContent: 'space-between',
                             }}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -413,16 +457,64 @@ export default function HomeDetailPage({ navigation, route }) {
                     </View>
                 </View>
 
+                {showStatusOptions && (
+                    <View style={styles.statusPopup}>
+                        <TouchableOpacity onPress={() => handleStatusUpdate('판매중')}>
+                            <Text style={styles.statusPopupItem}>판매중</Text>
+                        </TouchableOpacity>
+                        <View style={styles.statusPopupDivider} />
+                        <TouchableOpacity onPress={() => handleStatusUpdate('예약중')}>
+                            <Text style={styles.statusPopupItem}>예약중</Text>
+                        </TouchableOpacity>
+                        <View style={styles.statusPopupDivider} />
+                        <TouchableOpacity onPress={() => handleStatusUpdate('거래완료')}>
+                            <Text style={styles.statusPopupItem}>거래완료</Text>
+                        </TouchableOpacity>
+                        <View style={styles.statusPopupDivider} />
+                        <TouchableOpacity onPress={() => handleStatusUpdate('취소')}>
+                            <Text style={styles.statusPopupItem}>취소</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 <View style={styles.rightGroup}>
-                    <TouchableOpacity style={styles.chatBtnView}>
-                        <Image
-                            source={IMAGES.CHAT}
-                            resizeMode="contain"
-                            tintColor="white"
-                            style={{ width: 30, height: 30 }}
-                        />
-                        <Text style={styles.chatFont}>채팅하기</Text>
-                    </TouchableOpacity>
+                    {myUserId === post.userId ? (
+
+                        <TouchableOpacity
+                            style={styles.statusChangeBtnView}
+                            onPress={() => setShowStatusOptions(!showStatusOptions)}
+                        >
+                            <Text style={styles.statusChangeFont}>
+                                {statusDisplayMap[post.status].text}
+                            </Text>
+                            <Feather
+                                name={showStatusOptions ? "chevron-up" : "chevron-down"}
+                                size={24}
+                                color="#67574D"
+                            />
+                        </TouchableOpacity>
+
+                    ) : (
+                        <TouchableOpacity
+                            style={[
+                                styles.chatBtnView,
+                                post.status === 'COMPLETED' && styles.disabledChatBtn
+                            ]}
+                            disabled={post.status === 'COMPLETED'}
+                        >
+                            {post.status !== 'COMPLETED' && (
+                                <Image
+                                    source={IMAGES.CHAT}
+                                    resizeMode="contain"
+                                    tintColor="white"
+                                    style={{ width: 30, height: 30 }}
+                                />
+                            )}
+                            <Text style={styles.chatFont}>
+                                {post.status === 'COMPLETED' ? '거래완료' : '채팅하기'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
@@ -470,8 +562,8 @@ const styles = StyleSheet.create({
         color: "black",
     },
     tradeMethodFont: {
-        fontSize: wp("3.5%"),
-        fontWeight: "500",
+        fontSize: wp("4%"),
+        fontWeight: "bold",
         color: "#67574D",
         marginBottom: hp("1%"),
     },
@@ -506,7 +598,6 @@ const styles = StyleSheet.create({
         borderTopWidth: 0.5,
         borderTopColor: "gray",
     },
-
     leftGroup: {
         flexDirection: "row",
         alignItems: "center",
@@ -517,6 +608,23 @@ const styles = StyleSheet.create({
         alignItems: "center",
         position: "absolute",
         right: wp('5%'),
+    },
+    statusChangeBtnView: {
+        backgroundColor: "white",
+        width: wp("30%"),
+        height: hp("5%"),
+        justifyContent: "space-evenly",
+        alignItems: "center",
+        borderRadius: wp("3%"),
+        borderColor: "#67574D",
+        borderWidth: 1.5,
+        flexDirection: "row",
+    },
+    statusChangeFont: {
+        color: "#67574D",
+        fontSize: wp("4%"),
+        fontWeight: "bold",
+        marginLeft: wp("3%"),
     },
     heartBtnView: {
         backgroundColor: "white",
@@ -536,6 +644,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderRadius: wp("3%"),
         flexDirection: "row",
+    },
+    disabledChatBtn: {
+        backgroundColor: '#777777',
     },
     chatFont: {
         color: "white",
@@ -564,6 +675,31 @@ const styles = StyleSheet.create({
     },
     popupDivider: {
         height: 1,
+        backgroundColor: '#ddd',
+    },
+    statusPopup: {
+        position: 'absolute',
+        width: wp("45%"),
+        bottom: hp("10%"),
+        right: wp(0),
+        backgroundColor: 'white',
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+        zIndex: 1000,
+    },
+    statusPopupItem: {
+        alignSelf: "center",
+        fontSize: wp("5%"),
+        paddingVertical: 5,
+        color: "#333",
+        fontWeight: "bold",
+    },
+    statusPopupDivider: {
+        height: 2,
         backgroundColor: '#ddd',
     },
     naverBox: {
