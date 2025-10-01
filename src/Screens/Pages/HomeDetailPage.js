@@ -239,35 +239,55 @@ export default function HomeDetailPage({ navigation, route }) {
     };
 
     const handleStatusUpdate = async (statusText) => {
-
         setShowStatusOptions(false);
-        if (statusText === '취소') {
-            return;
-        }
+        if (statusText === '취소') return;
 
         const statusKey = statusSendMAP[statusText];
-        if (!statusKey) {
-            return;
-        }
+        if (!statusKey) return;
 
         try {
-            const response = await fetch(`${BASE_URL}/cambooks/community/post/${postId}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
+
+            const requestBody = {
+                title: post.title,
+                content: post.content,
+                price: post.price,
+                isbn: post.isbn,
+                tradeMethod: post.tradeMethod,
+                status: statusKey,
+            };
+
+            const response = await fetch(
+                `${BASE_URL}/cambooks/used-trade/${postId}?memberId=${myUserId}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                }
+            );
 
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(`상태 변경 실패: ${response.status} - ${errorData.message || response.statusText}`);
             }
 
+            const result = await response.json();
+
+            setPost((prev) => ({
+                ...prev,
+                status: result.status,
+                bookInfo: prev.bookInfo,
+            }));
 
         } catch (error) {
             console.error("상태 변경 요청 중 에러 발생:", error.message);
         }
     };
+
 
 
     if (!post) {

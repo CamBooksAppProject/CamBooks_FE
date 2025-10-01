@@ -23,6 +23,7 @@ export default function HomeEditPage({ navigation, route }) {
     const [price, setPrice] = useState('');
     const [isbn, setIsbn] = useState('');
     const [tradeMethod, setTradeMethod] = useState('');
+    const [status, setStatus] = useState('');
     const [images, setImages] = useState([]);
     const [userId, setUserId] = useState(null);
 
@@ -100,6 +101,7 @@ export default function HomeEditPage({ navigation, route }) {
             setPrice(String(data.price));
             setIsbn(data.isbn);
             setTradeMethod(data.tradeMethod);
+            setStatus(data.status);
 
             const base = BASE_URL;
             const imgs = (data.imageUrls || []).map(url => ({
@@ -153,7 +155,8 @@ export default function HomeEditPage({ navigation, route }) {
                                 content,
                                 price: parseInt(price, 10),
                                 isbn,
-                                tradeMethod
+                                tradeMethod,
+                                status
                             };
 
                             const res = await fetch(`${BASE_URL}/cambooks/used-trade/${postId}?memberId=${userId}`, {
