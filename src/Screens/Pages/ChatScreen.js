@@ -46,6 +46,28 @@ export default function ChatScreen() {
     }, [])
   );
 
+  // 시간 포맷 함수
+  const formatTime = (dateString) => {
+    if (!dateString) return "";
+
+    const messageDate = new Date(dateString);
+    const now = new Date();
+    const diff = now - messageDate;
+    const diffMinutes = Math.floor(diff / (1000 * 60));
+    const diffHours = Math.floor(diff / (1000 * 60 * 60));
+    const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 1) return "방금 전";
+    if (diffMinutes < 60) return `${diffMinutes}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+
+    // 7일 이상이면 날짜 표시
+    const month = messageDate.getMonth() + 1;
+    const day = messageDate.getDate();
+    return `${month}/${day}`;
+  };
+
   const renderChatItem = (item) => (
     <TouchableOpacity
       style={styles.rowContainer}
@@ -67,14 +89,21 @@ export default function ChatScreen() {
       <View style={styles.textContainer}>
         <View style={styles.nameTimeContainer}>
           <Text style={styles.nameText}>{item.roomName}</Text>
-          {item.unReadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{item.unReadCount}</Text>
-            </View>
-          )}
+          <View style={styles.rightSection}>
+            {item.lastMessageTime && (
+              <Text style={styles.timeText}>
+                {formatTime(item.lastMessageTime)}
+              </Text>
+            )}
+            {item.unReadCount > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadText}>{item.unReadCount}</Text>
+              </View>
+            )}
+          </View>
         </View>
-        <Text style={styles.chatMessage}>
-          {item.isGroupChat === "Y" ? "그룹 채팅" : "1:1 채팅"}
+        <Text style={styles.chatMessage} numberOfLines={1}>
+          {item.lastMessage || "아직 메시지가 없습니다"}
         </Text>
       </View>
     </TouchableOpacity>
@@ -187,12 +216,20 @@ const styles = StyleSheet.create({
   nameTimeContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
   nameText: {
     fontWeight: "bold",
+    flex: 1,
+  },
+  rightSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   timeText: {
     color: "gray",
+    fontSize: 12,
   },
   chatMessage: {
     color: "#555555",
