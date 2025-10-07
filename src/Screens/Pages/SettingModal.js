@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import IMAGES from "../../../assets";
-import api from "../../api/axiosInstance";
+import api, { memberApi, BASE_HOST } from "../../api/axiosInstance";
 
 const SettingModal = ({
   isVisible,
@@ -164,16 +164,35 @@ const SettingModal = ({
                   }
                   const pickerResult =
                     await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      mediaTypes: ImagePicker.MediaType
+                        ? ImagePicker.MediaType.Images
+                        : ImagePicker.MediaTypeOptions.Images,
                       allowsEditing: true,
                       aspect: [1, 1],
                       quality: 1,
                     });
-                  if (!pickerResult.cancelled) {
-                    // 여기서 서버 업로드 로직 추가 필요
-                    setProfileImage({ uri: pickerResult.uri });
-                    closePhotoModal();
-                    onClose();
+                  const canceled =
+                    pickerResult.canceled ?? pickerResult.cancelled;
+                  const chosen = pickerResult.assets?.[0] || pickerResult;
+                  const uri = chosen?.uri;
+                  if (!canceled && uri) {
+                    try {
+                      console.log("프로필 이미지 업로드 시작:", uri);
+                      const urlPath = await memberApi.uploadProfileImage(uri);
+                      console.log("서버 응답:", urlPath);
+
+                      const fullUrl = urlPath.startsWith("http")
+                        ? urlPath
+                        : `${BASE_HOST}${urlPath}`;
+                      console.log("프로필 이미지 URL:", fullUrl);
+                      setProfileImage({ uri: fullUrl });
+                      alert("프로필 이미지가 성공적으로 변경되었습니다.");
+                      closePhotoModal();
+                      onClose();
+                    } catch (e) {
+                      console.error("프로필 업로드 실패", e);
+                      alert("프로필 업로드에 실패했습니다.");
+                    }
                   }
                 }}
               >
@@ -182,8 +201,15 @@ const SettingModal = ({
 
               <TouchableOpacity
                 style={styles.menuOption}
-                onPress={() => {
-                  setProfileImage(IMAGES.LOGO);
+                onPress={async () => {
+                  try {
+                    await memberApi.deleteProfileImage();
+                    setProfileImage(null);
+                    alert("프로필 이미지가 기본 이미지로 변경되었습니다.");
+                  } catch (e) {
+                    console.error("프로필 이미지 삭제 실패", e);
+                    alert("프로필 이미지 변경에 실패했습니다.");
+                  }
                   closePhotoModal();
                   onClose();
                 }}

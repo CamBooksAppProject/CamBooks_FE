@@ -14,7 +14,7 @@ import {
 } from "react-native-responsive-screen";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useState, useEffect, useCallback } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import api from "../../api/axiosInstance";
 import IMAGES from "../../../assets";
 
@@ -176,7 +176,12 @@ export default function MyPost() {
 
             <View style={styles.metaInfo}>
               <View style={styles.leftMeta}>
-                <Image source={IMAGES.POSTPROFILE} style={styles.profileIcon} />
+                <MaterialIcons
+                  name="account-circle"
+                  size={16}
+                  color="#ccc"
+                  style={{ marginRight: 5 }}
+                />
 
                 <Text style={styles.dateText}>{item.date}</Text>
               </View>

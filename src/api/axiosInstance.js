@@ -107,9 +107,41 @@ export const chatApi = {
     return response.data;
   },
 
+  // 중고 게시글 상세 조회 (배너 상태 갱신용)
+  getUsedTradeDetail: async (postId) => {
+    const response = await api.get(`/used-trade/${postId}`);
+    return response.data;
+  },
+
   // 채팅방 나가기
   leaveChatRoom: async (roomId) => {
     const response = await api.delete(`/chat/room/${roomId}/leave`);
+    return response.data;
+  },
+};
+
+// 프로필 이미지 업로드 및 내 정보 조회
+export const memberApi = {
+  uploadProfileImage: async (fileUri) => {
+    const form = new FormData();
+    const filename = fileUri.split("/").pop() || `photo.jpg`;
+    const ext = filename.includes(".") ? filename.split(".").pop() : "jpg";
+    form.append("file", {
+      uri: fileUri,
+      name: filename,
+      type: `image/${ext}`,
+    });
+    const response = await api.post("/member/profile-image", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data; // url
+  },
+  deleteProfileImage: async () => {
+    const response = await api.delete("/member/profile-image");
+    return response.data;
+  },
+  getMyInfo: async () => {
+    const response = await api.get("/member/info");
     return response.data;
   },
 };
