@@ -121,7 +121,7 @@ export default function SettingPage() {
           </View>
 
           <View style={styles.myName}>
-            <Text style={{ fontSize: 16 }}>{nickname} 님</Text>
+            <Text style={{ fontSize: 16 }}>{nickname}</Text>
           </View>
         </View>
 
