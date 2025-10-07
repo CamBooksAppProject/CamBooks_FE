@@ -17,6 +17,7 @@
     "@react-navigation/material-top-tabs": "^6.6.14",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
+    "@stomp/stompjs": "^7.2.0",
     "axios": "^1.10.0",
     "core-js": "^3.45.1",
     "expo": "^54.0.10",
@@ -36,7 +37,9 @@
     "react-native-screens": "~4.16.0",
     "react-native-simple-modal": "^9.0.1",
     "react-native-webview": "13.15.0",
-    "rimraf": "^6.0.1"
+    "rimraf": "^6.0.1",
+    "sockjs-client": "^1.6.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
