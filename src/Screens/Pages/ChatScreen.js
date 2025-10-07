@@ -11,7 +11,9 @@ import {
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useState, useCallback } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
-import { chatApi } from "../../api/axiosInstance";
+import { Image } from "react-native";
+import { chatApi, BASE_HOST } from "../../api/axiosInstance";
+import IMAGES from "../../../assets";
 
 export default function ChatScreen() {
   const navigation = useNavigation();
@@ -68,46 +70,69 @@ export default function ChatScreen() {
     return `${month}/${day}`;
   };
 
-  const renderChatItem = (item) => (
-    <TouchableOpacity
-      style={styles.rowContainer}
-      key={item.roomId}
-      onPress={() =>
-        navigation.navigate("ChatDetailPage", {
-          roomId: item.roomId,
-          roomName: item.roomName,
-          isGroupChat: item.isGroupChat,
-        })
-      }
-    >
-      <MaterialIcons
-        name="person"
-        size={50}
-        color="#67574D"
-        style={{ marginRight: 10 }}
-      />
-      <View style={styles.textContainer}>
-        <View style={styles.nameTimeContainer}>
-          <Text style={styles.nameText}>{item.roomName}</Text>
-          <View style={styles.rightSection}>
-            {item.lastMessageTime && (
-              <Text style={styles.timeText}>
-                {formatTime(item.lastMessageTime)}
-              </Text>
-            )}
-            {item.unReadCount > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadText}>{item.unReadCount}</Text>
-              </View>
-            )}
+  const renderChatItem = (item) => {
+    // 프로필 이미지 URL 생성
+    const profileImageUri = item.profileImage
+      ? item.profileImage.startsWith("http")
+        ? item.profileImage
+        : `${BASE_HOST}${item.profileImage}`
+      : null;
+
+    return (
+      <TouchableOpacity
+        style={styles.rowContainer}
+        key={item.roomId}
+        onPress={() =>
+          navigation.navigate("ChatDetailPage", {
+            roomId: item.roomId,
+            roomName: item.roomName,
+            isGroupChat: item.isGroupChat,
+          })
+        }
+      >
+        {profileImageUri ? (
+          <Image
+            source={{ uri: profileImageUri }}
+            style={{
+              width: 50,
+              height: 50,
+              borderRadius: 25,
+              marginRight: 10,
+              backgroundColor: "#eee",
+            }}
+            resizeMode="cover"
+          />
+        ) : (
+          <MaterialIcons
+            name="account-circle"
+            size={50}
+            color="#ccc"
+            style={{ marginRight: 10 }}
+          />
+        )}
+        <View style={styles.textContainer}>
+          <View style={styles.nameTimeContainer}>
+            <Text style={styles.nameText}>{item.roomName}</Text>
+            <View style={styles.rightSection}>
+              {item.lastMessageTime && (
+                <Text style={styles.timeText}>
+                  {formatTime(item.lastMessageTime)}
+                </Text>
+              )}
+              {item.unReadCount > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadText}>{item.unReadCount}</Text>
+                </View>
+              )}
+            </View>
           </View>
+          <Text style={styles.chatMessage} numberOfLines={1}>
+            {item.lastMessage || "아직 메시지가 없습니다"}
+          </Text>
         </View>
-        <Text style={styles.chatMessage} numberOfLines={1}>
-          {item.lastMessage || "아직 메시지가 없습니다"}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const filteredChatData = chatRooms.filter((chat) => {
     if (activeTab === 0) return true;

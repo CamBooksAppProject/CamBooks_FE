@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import IMAGES from "../../../assets";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MaterialIcons } from "@expo/vector-icons";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -219,16 +220,40 @@ export default function HomeDetailPage({ navigation, route }) {
       }
 
       // 채팅방으로 이동
+      // 게시글 요약 정보 전달 (채팅 상단에 노출)
+      const firstImage =
+        Array.isArray(post.imageUrls) && post.imageUrls.length > 0
+          ? post.imageUrls[0].startsWith("http")
+            ? post.imageUrls[0]
+            : `${BASE_URL}${post.imageUrls[0]}`
+          : undefined;
+
       const navigationParams = {
         roomId: roomId,
         roomName: post.writerName,
         isGroupChat: "N",
+        postSummary: {
+          postId: postId,
+          title: post.title,
+          price: post.price,
+          thumbnail: firstImage,
+          badgeText: "판매중",
+        },
       };
 
       console.log("네비게이션 파라미터:", navigationParams);
 
       // 네비게이션 시도
       try {
+        // 채팅방 배너 정보 로컬에 저장해 두어 재방문 시에도 유지
+        try {
+          await AsyncStorage.setItem(
+            `chat_post_summary_${roomId}`,
+            JSON.stringify(navigationParams.postSummary)
+          );
+        } catch (e) {
+          console.warn("postSummary 저장 실패", e);
+        }
         navigation.navigate("ChatDetailPage", navigationParams);
         console.log("채팅방으로 이동 완료");
       } catch (navError) {
@@ -310,10 +335,11 @@ export default function HomeDetailPage({ navigation, route }) {
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Image
-                  source={IMAGES.POSTPROFILE}
-                  resizeMode="contain"
-                  style={{ height: 15, width: 15 }}
+                <MaterialIcons
+                  name="account-circle"
+                  size={15}
+                  color="#ccc"
+                  style={{ marginRight: 3 }}
                 />
                 <Text style={styles.nameFont}>{post.writerName}</Text>
                 <Text style={styles.collegeFont}>{post.university}</Text>

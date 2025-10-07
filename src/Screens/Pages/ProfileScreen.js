@@ -7,13 +7,15 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../../api/axiosInstance";
+import api, { BASE_HOST } from "../../api/axiosInstance";
+import IMAGES from "../../../assets";
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -21,6 +23,7 @@ export default function ProfileScreen() {
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [nickname, setNickname] = useState("사용자");
+  const [profileUri, setProfileUri] = useState(null);
 
   const isFocused = useIsFocused();
 
@@ -30,6 +33,14 @@ export default function ProfileScreen() {
         setLoading(true); // 로딩 상태 초기화
         const response = await api.get("/member/info");
         setUserInfo(response.data);
+        if (response.data?.profileImage) {
+          const full = response.data.profileImage.startsWith("http")
+            ? response.data.profileImage
+            : `${BASE_HOST}${response.data.profileImage}`;
+          setProfileUri(full);
+        } else {
+          setProfileUri(null);
+        }
 
         const res = await api.get("/member/nickname");
         setNickname(res.data || "사용자");
@@ -53,7 +64,15 @@ export default function ProfileScreen() {
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <SafeAreaView style={styles.container}>
         <View style={styles.userContainer}>
-          <MaterialIcons name="account-circle" size={120} color="#ccc" />
+          {profileUri ? (
+            <Image
+              source={{ uri: profileUri }}
+              style={styles.avatar}
+              resizeMode="cover"
+            />
+          ) : (
+            <MaterialIcons name="account-circle" size={120} color="#ccc" />
+          )}
           {loading ? (
             <Text style={styles.userText}>로딩중...</Text>
           ) : (
@@ -168,6 +187,12 @@ const styles = StyleSheet.create({
     height: "30%",
     justifyContent: "center",
     alignItems: "center",
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#eee",
   },
   locContainer: {
     flexDirection: "row",

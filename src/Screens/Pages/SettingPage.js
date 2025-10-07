@@ -10,23 +10,24 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Switch } from "react-native-gesture-handler";
 
 import SettingModal from "./SettingModal.js";
 import IMAGES from "../../../assets";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../../api/axiosInstance";
+import api, { memberApi, BASE_HOST } from "../../api/axiosInstance";
 
 export default function SettingPage() {
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
   const [isChatEnabled, setIsChatEnabled] = useState(false);
   const [isCommunityEnabled, setIsCommunityEnabled] = useState(false);
 
   const [nickname, setNickname] = useState("사용자");
-  const [profileImage, setProfileImage] = useState(IMAGES.LOGO);
+  const [profileImage, setProfileImage] = useState(null);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -41,9 +42,30 @@ export default function SettingPage() {
     }
   };
 
+  // 프로필 이미지 불러오기
+  const fetchProfileImage = async () => {
+    try {
+      const info = await memberApi.getMyInfo();
+      if (info?.profileImage) {
+        const full = info.profileImage.startsWith("http")
+          ? info.profileImage
+          : `${BASE_HOST}${info.profileImage}`;
+        setProfileImage({ uri: full });
+      } else {
+        setProfileImage(null);
+      }
+    } catch (e) {
+      console.error("프로필 이미지 불러오기 실패:", e);
+      setProfileImage(null);
+    }
+  };
+
   useEffect(() => {
-    fetchNickname();
-  }, []);
+    if (isFocused) {
+      fetchNickname();
+      fetchProfileImage();
+    }
+  }, [isFocused]);
 
   const handleLogout = async () => {
     try {
@@ -116,7 +138,11 @@ export default function SettingPage() {
         <View style={styles.myContainer}>
           <View style={styles.myImg}>
             <TouchableOpacity onPress={() => setIsModalVisible(true)}>
-              <Image source={profileImage} style={styles.backImg} />
+              {profileImage && profileImage.uri ? (
+                <Image source={profileImage} style={styles.backImg} />
+              ) : (
+                <MaterialIcons name="account-circle" size={44} color="#ccc" />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -198,6 +224,7 @@ export default function SettingPage() {
         onClose={() => {
           setIsModalVisible(false);
           fetchNickname();
+          fetchProfileImage();
         }}
         nickname={nickname}
         setNickname={setNickname}
