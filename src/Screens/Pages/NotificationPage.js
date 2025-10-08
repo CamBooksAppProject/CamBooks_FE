@@ -1,18 +1,80 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, TouchableOpacity, Image, FlatList, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     widthPercentageToDP as wp, heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
+import { BASE_URL } from '@env';
 import IMAGES from '../../../assets';
 
-const DATA = new Array(5).fill(0).map((_, index) => ({ id: index }));
-
-
 export default function NotificationPage({ navigation }) {
+    const [notifications, setNotifications] = useState([]);
+    const [myUserId, setMyUserId] = useState(null);
+
+    // userId 로드
+    const loadMyUserId = async () => {
+        try {
+            const userIdStr = await AsyncStorage.getItem('userId');
+            if (!userIdStr) return;
+            setMyUserId(Number(userIdStr));
+        } catch (e) {
+            console.error("userId 로드 실패:", e);
+        }
+    };
+
+    // 알림 불러오기
+    const fetchNotifications = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) {
+                console.warn("토큰 없음");
+                return;
+            }
+
+            const res = await fetch(`${BASE_URL}/cambooks/notification`, {
+                method: "GET",
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!res.ok) {
+                console.log("서버 응답 에러:", res.status);
+                return;
+            }
+
+            const data = await res.json();
+            setNotifications(data);
+        } catch (error) {
+            console.log("fetch error:", error);
+        }
+    };
+
+    useEffect(() => {
+        loadMyUserId();
+        fetchNotifications();
+    }, []);
+
+    const renderItem = ({ item }) => (
+        <TouchableOpacity
+            style={styles.listView}
+            onPress={() => navigation.reset({
+                index: 0,
+                routes: [{ name: "FreeBoardDetailPage", params: { id: item.navigateId } }],
+            })}
+        >
+            <View style={styles.row}>
+                <Text style={styles.title}>{item.content}</Text>
+                <Text style={styles.timeFont}>{item.time}</Text>
+            </View>
+            <Text style={styles.contentsFont}>공지 타입: {item.noticeTypeId}</Text>
+        </TouchableOpacity >
+    );
+
     return (
         <View style={styles.container}>
-
             <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.navigate("RouteScreen")} style={{ marginLeft: 15 }}>
@@ -27,28 +89,11 @@ export default function NotificationPage({ navigation }) {
 
             <View style={styles.middleView}>
                 <FlatList
-
-                    data={DATA}
-                    renderItem={() => {
-                        return (
-                            < TouchableOpacity style={styles.listView} onPress={() => navigation.navigate("FreeBoardDetailPage")}>
-                                <View style={{ flexDirection: 'row', width: '95%', alignSelf: 'center' }}>
-                                    <View style={{ flexDirection: 'column' }}>
-                                        <View style={{ flexDirection: 'row' }}>
-                                            <Text style={styles.title}>댓글이 달렸습니다.</Text>
-                                            <Text style={styles.timeFont}>14:54</Text>
-                                        </View>
-                                        <Text style={styles.contentsFont}>이거 얼마인가요?</Text>
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        )
-                    }
-
-                    }
+                    data={notifications}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={renderItem}
                 />
             </View>
-
         </View>
     );
 }
@@ -64,35 +109,37 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     middleView: {
-        backgroundColor: 'white',
-        width: '100%',
-        height: '90%',
+        flex: 1,
     },
     listView: {
-        width: '95%',
-        height: 60,
+        width: '100%',
         backgroundColor: 'white',
-        alignSelf: 'center',
-        justifyContent: 'center',
-        marginTop: 10,
-        borderBottomWidth: 0.5,
-        borderBottomColor: '#CDCDCD',
-
+        paddingVertical: 12,
+        paddingHorizontal: 18,
+        borderBottomWidth: 0.7,
+        borderBottomColor: '#e0e0e0',
+    },
+    row: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     title: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 'bold',
-        marginLeft: 15,
+        color: '#2d3436',
+        flexShrink: 1,
+        marginLeft: 10,
     },
     contentsFont: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#515a5a',
-        marginLeft: 15,
-        marginTop: 6,
+        marginTop: 4,
+        marginLeft: 10,
     },
     timeFont: {
         fontSize: 11,
-        color: 'gray',
-        marginLeft: 200,
+        color: '#aaa',
+        marginLeft: 10,
     },
 });
