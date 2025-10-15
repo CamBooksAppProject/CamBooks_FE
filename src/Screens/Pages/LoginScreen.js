@@ -27,7 +27,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     try {
       const response = await fetch(
-        "http://192.168.0.23:8080/cambooks/member/doLogin",
+        "http://localhost:8080/cambooks/member/doLogin",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
