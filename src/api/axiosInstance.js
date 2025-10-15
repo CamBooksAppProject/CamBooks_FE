@@ -2,7 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
 
-export const BASE_URL = "http://192.168.0.23:8080/cambooks";
+export const BASE_URL = "http://localhost:8080/cambooks";
 export const BASE_HOST = BASE_URL.replace(/\/?cambooks\/?$/, "");
 
 const api = axios.create({

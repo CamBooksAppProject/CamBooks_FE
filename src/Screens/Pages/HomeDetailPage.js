@@ -10,17 +10,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import IMAGES from "../../../assets";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { MaterialIcons } from "@expo/vector-icons";
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-native-responsive-screen";
 import { Alert } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { BASE_URL } from '@env';
 import { Feather } from '@expo/vector-icons';
+import { MaterialIcons } from "@expo/vector-icons";
+import { chatApi } from "../../api/axiosInstance";
+
 
 const statusDisplayMap = {
     'AVAILABLE': { text: '판매중' },
@@ -41,6 +40,7 @@ export default function HomeDetailPage({ navigation, route }) {
     const [showOptions, setShowOptions] = useState(false);
     const [showStatusOptions, setShowStatusOptions] = useState(false);
     const [myUserId, setMyUserId] = useState(null);
+    const [isChatLoading, setIsChatLoading] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -80,10 +80,8 @@ export default function HomeDetailPage({ navigation, route }) {
         } catch (error) {
             console.error("상세 API 오류:", error);
         }
-      );
+    };
 
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
 
     const loadHeartStatus = async () => {
         try {
@@ -95,125 +93,59 @@ export default function HomeDetailPage({ navigation, route }) {
         }
     };
 
-      setPost(data);
-    } catch (error) {
-      console.error("상세 API 오류:", error);
-    }
-  };
+    const handleHeartPress = async () => {
+        try {
+            const key = `liked_usedTrade_${postId}`;
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
 
-  const loadHeartStatus = async () => {
-    try {
-      const key = `liked_usedTrade_${postId}`;
-      const saved = await AsyncStorage.getItem(key);
-      console.log("좋아요 상태 불러오기:", saved);
-      setIsHeartFilled(saved === "true");
-    } catch (e) {
-      console.error("좋아요 상태 불러오기 실패:", e);
-    }
-  };
+            const res = await fetch(`${BASE_URL}/cambooks/post-likes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    postType: "USED_TRADE"
+                })
+            });
 
-  const handleHeartPress = async () => {
-    try {
-      const key = `liked_usedTrade_${postId}`;
-      const token = await AsyncStorage.getItem("accessToken");
-      if (!token) throw new Error("로그인이 필요합니다.");
+            if (!res.ok) throw new Error("좋아요 토글 실패");
 
-      const res = await fetch(`${BASE_URL}/cambooks/post-likes`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          postId: postId,
-          postType: "USED_TRADE",
-        }),
-      });
+            const newState = !isHeartFilled;
+            setIsHeartFilled(newState);
 
-      if (!res.ok) throw new Error("좋아요 토글 실패");
+            // 2. AsyncStorage & 로컬 카운트 업데이트
+            if (newState) {
+                await AsyncStorage.setItem(key, 'true');
+                setPost(prev => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
+            } else {
+                await AsyncStorage.removeItem(key);
+                setPost(prev => ({ ...prev, postLikeCount: Math.max(prev.postLikeCount - 1, 0) }));
+            }
 
-      const newState = !isHeartFilled;
-      setIsHeartFilled(newState);
+            // 3. 좋아요 수 증가/감소 DB 반영
+            const countRes = await fetch(`${BASE_URL}/cambooks/post-likes/count`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    postType: "USED_TRADE"
+                })
+            });
 
-      // 2. AsyncStorage & 로컬 카운트 업데이트
-      if (newState) {
-        await AsyncStorage.setItem(key, "true");
-        setPost((prev) => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
-      } else {
-        await AsyncStorage.removeItem(key);
-        setPost((prev) => ({
-          ...prev,
-          postLikeCount: Math.max(prev.postLikeCount - 1, 0),
-        }));
-      }
+            if (!countRes.ok) {
+                console.warn("좋아요 수 증가/감소 실패:", countRes.status);
+            }
 
-      // 3. 좋아요 수 증가/감소 DB 반영
-      const countRes = await fetch(`${BASE_URL}/cambooks/post-likes/count`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          postId: postId,
-          postType: "USED_TRADE",
-        }),
-      });
-
-      if (!countRes.ok) {
-        console.warn("좋아요 수 증가/감소 실패:", countRes.status);
-      }
-    } catch (e) {
-      console.error("좋아요 처리 실패:", e);
-    }
-  };
-
-  const loadMyUserId = async () => {
-    try {
-      const userIdStr = await AsyncStorage.getItem("userId");
-      if (!userIdStr) return;
-      setMyUserId(Number(userIdStr));
-      console.log("내 userId:", userIdStr);
-    } catch (e) {
-      console.error("userId 로드 실패:", e);
-    }
-  };
-
-  const handleDeleteAlert = () => {
-    Alert.alert(
-      "삭제 확인",
-      "삭제하시겠습니까?",
-      [
-        {
-          text: "취소",
-          style: "cancel",
-        },
-        {
-          text: "확인",
-          style: "destructive",
-          onPress: () => {
-            handleConfirmDelete();
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  };
-
-  const handleConfirmDelete = async () => {
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
-      if (!token) throw new Error("토큰 없음");
-
-      const response = await fetch(
-        `${BASE_URL}/cambooks/used-trade/${postId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        } catch (e) {
+            console.error("좋아요 처리 실패:", e);
         }
-      );
+    };
 
     const loadMyUserId = async () => {
         try {
@@ -289,65 +221,8 @@ export default function HomeDetailPage({ navigation, route }) {
         );
     };
 
-      console.log("삭제 완료");
-      navigation.goBack(); // 삭제 후 뒤로가기
-    } catch (e) {
-      console.error("삭제 오류:", e);
-    }
-  };
 
-  const handleChatPress = async () => {
-    if (isChatLoading) return; // 이미 처리 중이면 중복 실행 방지
-
-    try {
-      // 자신의 게시글인 경우 채팅 불가
-      if (myUserId === post.userId) {
-        Alert.alert("알림", "본인의 게시글입니다.");
-        return;
-      }
-
-      setIsChatLoading(true);
-      console.log("채팅방 생성 시작 - 대상 사용자 ID:", post.userId);
-      console.log("현재 게시글 작성자:", post.writerName);
-
-      // 채팅방 생성 또는 기존 채팅방 가져오기
-      const roomId = await chatApi.createOrGetPrivateRoom(post.userId);
-
-      console.log("채팅방 생성/조회 성공 - roomId:", roomId);
-      console.log("roomId 타입:", typeof roomId);
-
-      // roomId가 유효한지 확인
-      if (!roomId) {
-        throw new Error("채팅방 ID를 받지 못했습니다.");
-      }
-
-      // 채팅방으로 이동
-      // 게시글 요약 정보 전달 (채팅 상단에 노출)
-      const firstImage =
-        Array.isArray(post.imageUrls) && post.imageUrls.length > 0
-          ? post.imageUrls[0].startsWith("http")
-            ? post.imageUrls[0]
-            : `${BASE_URL}${post.imageUrls[0]}`
-          : undefined;
-
-      const navigationParams = {
-        roomId: roomId,
-        roomName: post.writerName,
-        isGroupChat: "N",
-        postSummary: {
-          postId: postId,
-          title: post.title,
-          price: post.price,
-          thumbnail: firstImage,
-          badgeText: "판매중",
-        },
-      };
-
-      console.log("네비게이션 파라미터:", navigationParams);
-
-      // 네비게이션 시도
-      try {
-        // 채팅방 배너 정보 로컬에 저장해 두어 재방문 시에도 유지
+    const handleConfirmDelete = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) throw new Error("토큰 없음");
@@ -363,7 +238,7 @@ export default function HomeDetailPage({ navigation, route }) {
 
             navigation.goBack();
         } catch (e) {
-          console.warn("postSummary 저장 실패", e);
+            console.error("삭제 오류:", e);
         }
     };
 
@@ -417,6 +292,85 @@ export default function HomeDetailPage({ navigation, route }) {
         }
     };
 
+    const handleChatPress = async () => {
+        if (isChatLoading) return; // 이미 처리 중이면 중복 실행 방지
+
+        try {
+            // 자신의 게시글인 경우 채팅 불가
+            if (myUserId === post.userId) {
+                Alert.alert("알림", "본인의 게시글입니다.");
+                return;
+            }
+
+            setIsChatLoading(true);
+            console.log("채팅방 생성 시작 - 대상 사용자 ID:", post.userId);
+            console.log("현재 게시글 작성자:", post.writerName);
+
+            // 채팅방 생성 또는 기존 채팅방 가져오기
+            const roomId = await chatApi.createOrGetPrivateRoom(post.userId);
+
+            console.log("채팅방 생성/조회 성공 - roomId:", roomId);
+            console.log("roomId 타입:", typeof roomId);
+
+            // roomId가 유효한지 확인
+            if (!roomId) {
+                throw new Error("채팅방 ID를 받지 못했습니다.");
+            }
+
+            // 채팅방으로 이동
+            // 게시글 요약 정보 전달 (채팅 상단에 노출)
+            const firstImage =
+                Array.isArray(post.imageUrls) && post.imageUrls.length > 0
+                    ? post.imageUrls[0].startsWith("http")
+                        ? post.imageUrls[0]
+                        : `${BASE_URL}${post.imageUrls[0]}`
+                    : undefined;
+
+            const navigationParams = {
+                roomId: roomId,
+                roomName: post.writerName,
+                isGroupChat: "N",
+                postSummary: {
+                    postId: postId,
+                    title: post.title,
+                    price: post.price,
+                    thumbnail: firstImage,
+                    badgeText: "판매중",
+                },
+            };
+
+            console.log("네비게이션 파라미터:", navigationParams);
+
+            // 네비게이션 시도
+            try {
+                // 채팅방 배너 정보 로컬에 저장해 두어 재방문 시에도 유지
+                try {
+                    await AsyncStorage.setItem(
+                        `chat_post_summary_${roomId}`,
+                        JSON.stringify(navigationParams.postSummary)
+                    );
+                } catch (e) {
+                    console.warn("postSummary 저장 실패", e);
+                }
+                navigation.navigate("ChatDetailPage", navigationParams);
+                console.log("채팅방으로 이동 완료");
+            } catch (navError) {
+                console.error("네비게이션 오류:", navError);
+                // 대안: 스택 네비게이션 시도
+                navigation.push("ChatDetailPage", navigationParams);
+            }
+        } catch (error) {
+            console.error("채팅방 생성 실패:", error);
+            console.error("에러 상세:", error.response?.data || error.message);
+            Alert.alert(
+                "오류",
+                "채팅방을 생성하는데 실패했습니다. 다시 시도해주세요."
+            );
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
+
 
 
     if (!post) {
@@ -426,9 +380,7 @@ export default function HomeDetailPage({ navigation, route }) {
             </View>
         );
     }
-  };
 
-  if (!post) {
     return (
         <View style={styles.container}>
             <SafeAreaView edges={['top']} />
@@ -438,10 +390,10 @@ export default function HomeDetailPage({ navigation, route }) {
                     style={{ marginLeft: 15 }}
                 >
                     <Image
-                      key={index}
-                      source={{ uri: fullUri }}
-                      style={styles.photo}
-                      resizeMode="cover"
+                        source={IMAGES.BACK}
+                        resizeMode="contain"
+                        tintColor="#474747"
+                        style={{ width: 25, height: 25 }}
                     />
                 </TouchableOpacity>
             </View>
@@ -474,10 +426,11 @@ export default function HomeDetailPage({ navigation, route }) {
                             }}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Image
-                                    source={IMAGES.POSTPROFILE}
-                                    resizeMode="contain"
-                                    style={{ height: 15, width: 15 }}
+                                <MaterialIcons
+                                    name="account-circle"
+                                    size={15}
+                                    color="#ccc"
+                                    style={{ marginRight: 3 }}
                                 />
                                 <Text style={styles.nameFont}>{post.writerName}</Text>
                                 <Text style={styles.collegeFont}>{post.university}</Text>
@@ -649,9 +602,11 @@ export default function HomeDetailPage({ navigation, route }) {
                         <TouchableOpacity
                             style={[
                                 styles.chatBtnView,
-                                post.status === 'COMPLETED' && styles.disabledChatBtn
+                                post.status === 'COMPLETED' && styles.disabledChatBtn,
+                                { opacity: isChatLoading ? 0.7 : 1 },
                             ]}
-                            disabled={post.status === 'COMPLETED'}
+                            onPress={post.status !== 'COMPLETED' ? handleChatPress : undefined}
+                            disabled={post.status === 'COMPLETED' || isChatLoading}
                         >
                             {post.status !== 'COMPLETED' && (
                                 <Image
@@ -662,32 +617,20 @@ export default function HomeDetailPage({ navigation, route }) {
                                 />
                             )}
                             <Text style={styles.chatFont}>
-                                {post.status === 'COMPLETED' ? '거래완료' : '채팅하기'}
+                                {post.status === 'COMPLETED'
+                                    ? '거래완료'
+                                    : isChatLoading
+                                        ? '채팅방 생성 중...'
+                                        : '채팅하기'}
                             </Text>
                         </TouchableOpacity>
+
                     )}
                 </View>
             </View>
 
         </View>
-        <TouchableOpacity
-          style={[styles.chatBtnView, { opacity: isChatLoading ? 0.7 : 1 }]}
-          onPress={handleChatPress}
-          disabled={isChatLoading}
-        >
-          <Image
-            source={IMAGES.CHAT}
-            resizeMode="contain"
-            tintColor="white"
-            style={{ width: 30, height: 30 }}
-          />
-          <Text style={styles.chatFont}>
-            {isChatLoading ? "채팅방 생성 중..." : "채팅하기"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
 }
 
 const styles = StyleSheet.create({

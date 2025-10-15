@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
     StyleSheet, View, TouchableOpacity, Image,
     Text, ScrollView, TextInput, Alert
@@ -10,6 +10,7 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from "react-nat
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { BASE_URL } from '@env';
+import { MaterialIcons } from "@expo/vector-icons";
 
 export default function FreeBoardDetailPage({ route, navigation }) {
     const { postId } = route.params;
@@ -59,38 +60,64 @@ export default function FreeBoardDetailPage({ route, navigation }) {
         } catch (err) {
             console.error('게시글 불러오기 실패:', err);
         }
-      );
-      if (!res.ok) throw new Error(`에러 코드: ${res.status}`);
-      const data = await res.json();
-      console.log("받아온 post 데이터:", data);
+    };
 
-      setPost(data);
-    } catch (err) {
-      console.error("게시글 불러오기 실패:", err);
-    }
-  };
+    const fetchComments = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`${BASE_URL}/cambooks/general-forum/comment?postId=${postId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
 
-  const fetchComments = async () => {
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
-      const res = await fetch(
-        `${BASE_URL}/cambooks/general-forum/comment?postId=${postId}`,
-        {
-          headers: {
-            Accept: "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
+            if (!res.ok) throw new Error(`댓글 불러오기 실패: ${res.status}`);
+
+            const text = await res.text();
+
+            if (!text || text.trim() === "" || text.trim() === "null") {
+                setComments([]);
+                return;
+            }
+
+            const data = JSON.parse(text);
+            setComments(data);
+        } catch (err) {
+            console.error('댓글 불러오기 실패:', err);
         }
-      );
+    };
 
-      if (!res.ok) throw new Error(`댓글 불러오기 실패: ${res.status}`);
+    const handleCommentSubmit = async () => {
+        if (!commentText.trim()) return;
 
-      const text = await res.text();
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`${BASE_URL}/cambooks/general-forum/comment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    comment: commentText.trim(),
+                }),
+            });
 
-      if (!text || text.trim() === "" || text.trim() === "null") {
-        setComments([]);
-        return;
-      }
+            if (!res.ok) throw new Error('댓글 등록 실패');
+
+            setCommentText('');
+            await fetchComments();
+        } catch (err) {
+            console.error(err);
+            Alert.alert('오류', '댓글 작성 중 문제가 발생했습니다.');
+        }
+    };
+
+
+
+
 
     const loadHeartStatus = async () => {
         try {
@@ -229,44 +256,18 @@ export default function FreeBoardDetailPage({ route, navigation }) {
             console.error("댓글 삭제 실패:", e);
             Alert.alert("오류", "댓글 삭제 중 문제가 발생했습니다.");
         }
-      );
+    };
 
-      if (!response.ok) throw new Error("삭제 실패");
 
-      console.log("삭제 완료");
-      navigation.goBack(); // 삭제 후 뒤로가기
-    } catch (e) {
-      console.error("삭제 오류:", e);
+
+    if (!post) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text>로딩 중...</Text>
+            </View>
+        );
     }
-  };
 
-  const handleDeleteComment = async (commentId) => {
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
-      if (!token) throw new Error("토큰 없음");
-
-      const res = await fetch(
-        `${BASE_URL}/cambooks/general-forum/comment/${commentId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!res.ok && res.status !== 204)
-        throw new Error(`삭제 실패: ${res.status}`);
-
-      console.log("댓글 삭제 완료");
-      await fetchComments(); // 삭제 후 댓글 새로고침
-    } catch (e) {
-      console.error("댓글 삭제 실패:", e);
-      Alert.alert("오류", "댓글 삭제 중 문제가 발생했습니다.");
-    }
-  };
-
-  if (!post) {
     return (
         <View style={styles.container}>
             <SafeAreaView edges={['top']} />
@@ -281,7 +282,12 @@ export default function FreeBoardDetailPage({ route, navigation }) {
                     <View style={{ padding: 15 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Image source={IMAGES.POSTPROFILE} style={{ height: 25, width: 25 }} />
+                                <MaterialIcons
+                                    name="account-circle"
+                                    size={25}
+                                    color="#ccc"
+                                    style={{ marginRight: 5 }}
+                                />
                                 <Text style={styles.nameFont}>{post.writerName}</Text>
                                 <Text style={[styles.timeFont, { marginLeft: 10 }]}>
                                     {post.createdAt?.slice(0, 10) ?? ''}
@@ -299,19 +305,7 @@ export default function FreeBoardDetailPage({ route, navigation }) {
                             )}
                         </View>
 
-                {myUserId === post.userId && (
-                  <>
-                    <View style={styles.popupDivider} />
-                    <TouchableOpacity
-                      onPress={() => {
-                        setShowOptions(false);
-                        navigation.navigate("FreeBoardEditPage", { postId });
-                      }}
-                    >
-                      <Text style={styles.popupItem}>수정하기</Text>
-                    </TouchableOpacity>
 
-                    <View style={styles.popupDivider} />
 
                         {showOptions && (
                             <View style={styles.popup}>
@@ -361,7 +355,12 @@ export default function FreeBoardDetailPage({ route, navigation }) {
                                 return (
                                     <View key={idx} style={styles.commentView}>
                                         <View style={styles.commentLeft}>
-                                            <Image source={IMAGES.POSTPROFILE} style={styles.commentProfile} />
+                                            <MaterialIcons
+                                                name="account-circle"
+                                                size={20}
+                                                color="#ccc"
+                                                style={{ marginRight: 8 }}
+                                            />
                                             <Text style={styles.commentName}>{comment?.name ?? '익명'}</Text>
                                         </View>
 
@@ -409,92 +408,26 @@ export default function FreeBoardDetailPage({ route, navigation }) {
 
                     </View>
 
-                    <View style={styles.commentRight}>
-                      <Text style={styles.commentTime}>
-                        {createdAtFormatted}
-                      </Text>
 
-                      <TouchableOpacity
-                        onPress={() => {
-                          if (visibleOptionId === comment.id) {
-                            setVisibleOptionId(null);
-                          } else {
-                            setVisibleOptionId(comment.id);
-                          }
-                        }}
-                        style={{ padding: 5 }}
-                      >
-                        <Image
-                          source={IMAGES.THREEDOT}
-                          resizeMode="contain"
-                          style={{ height: 13, width: 13 }}
-                        />
-                      </TouchableOpacity>
+                    <View style={{ height: 80 }} />
+                </ScrollView>
+            </View>
 
-                      {visibleOptionId === comment.id && (
-                        <View style={styles.popupComment}>
-                          <TouchableOpacity
-                            onPress={() => {
-                              setVisibleOptionId(null);
-                              console.log("신고하기");
-                            }}
-                          >
-                            <Text style={styles.popupItem}>신고하기</Text>
-                          </TouchableOpacity>
-
-                          {isMyComment && (
-                            <>
-                              <View style={styles.popupDivider} />
-                              <TouchableOpacity
-                                onPress={() => {
-                                  setVisibleOptionId(null);
-                                  showDeleteCommentAlert(comment.id);
-                                }}
-                              >
-                                <Text style={styles.popupItem}>삭제하기</Text>
-                              </TouchableOpacity>
-                            </>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                );
-              })
-            ) : (
-              <Text
-                style={{ textAlign: "center", color: "gray", marginTop: 10 }}
-              >
-                댓글이 없습니다.
-              </Text>
-            )}
-          </View>
-
-          <View style={{ height: 80 }} />
-        </ScrollView>
-      </View>
-
-      <View style={styles.bottomView}>
-        <View style={styles.inputView}>
-          <TextInput
-            style={styles.input}
-            placeholder="댓글을 입력하세요."
-            value={commentText}
-            onChangeText={setCommentText}
-          />
-          <TouchableOpacity
-            style={styles.sendBtnView}
-            onPress={handleCommentSubmit}
-          >
-            <Image
-              source={IMAGES.SEND}
-              style={{ width: 25, height: 25, tintColor: "white" }}
-            />
-          </TouchableOpacity>
+            <View style={styles.bottomView}>
+                <View style={styles.inputView}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="댓글을 입력하세요."
+                        value={commentText}
+                        onChangeText={setCommentText}
+                    />
+                    <TouchableOpacity style={styles.sendBtnView} onPress={handleCommentSubmit}>
+                        <Image source={IMAGES.SEND} style={{ width: 25, height: 25, tintColor: 'white' }} />
+                    </TouchableOpacity>
+                </View>
+            </View>
         </View>
-      </View>
-    </View>
-  );
+    );
 }
 const styles = StyleSheet.create({
     container: {
@@ -580,12 +513,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         flex: 2,
-    },
-    commentProfile: {
-        width: 20,
-        height: 20,
-        borderRadius: 15,
-        marginRight: 8,
     },
     commentName: {
         fontSize: 12,
