@@ -15,11 +15,11 @@ import IMAGES from '../../../assets';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { BASE_URL } from '@env';
 
 export default function CommunScreen() {
     const navigation = useNavigation();
     const [items, setItems] = useState([]);
-    const BASE_URL = 'http://localhost:8080';
 
     useFocusEffect(
         useCallback(() => {
@@ -39,7 +39,7 @@ export default function CommunScreen() {
     const fetchCommentCount = async (postId) => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:8080/cambooks/community/comment/count?postId=${postId}`, {
+            const res = await fetch(`${BASE_URL}/cambooks/community/comment/count?postId=${postId}`, {
                 headers: {
                     'Accept': 'application/json',
                     ...(token && { Authorization: `Bearer ${token}` }),

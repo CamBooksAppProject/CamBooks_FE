@@ -16,12 +16,17 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { BASE_URL } from '@env';
+
+const statusDisplayMap = {
+  'AVAILABLE': { text: '판매중', color: '#4A90E2' },
+  'RESERVED': { text: '예약중', color: '#F4A261' },
+  'COMPLETED': { text: '거래완료', color: '#B5534C' },
+};
 
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [items, setItems] = useState([]);
-  const BASE_URL = 'http://localhost:8080';
-
 
   useFocusEffect(
     useCallback(() => {
@@ -29,20 +34,16 @@ export default function HomeScreen() {
     }, [])
   );
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
 
       if (!token) throw new Error("로그인이 필요합니다.");
 
-      const response = await fetch("http://localhost:8080/cambooks/used-trade", {
+      const response = await fetch(`${BASE_URL}/cambooks/used-trade`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
@@ -52,8 +53,6 @@ export default function HomeScreen() {
       }
 
       const data = await response.json();
-
-      console.log('items:', items);
 
       setItems(Array.isArray(data) ? data : data.posts || []);
     } catch (error) {
@@ -88,18 +87,27 @@ export default function HomeScreen() {
               ? `${item.price.toLocaleString()}원`
               : item.price}
           </Text>
-          <View style={styles.iconRow}>
-            <Image source={IMAGES.REDHEART} style={styles.iconImage} resizeMode="contain" />
-            <Text style={styles.iconFont}>{item.postLikeCount}</Text>
-            <Image source={IMAGES.EYE} style={styles.iconImage} resizeMode="contain" />
-            <Text style={styles.iconFont}>{item.viewCount}</Text>
+
+
+          <View style={styles.contentRow}>
+            <View style={styles.iconRow}>
+              <Image source={IMAGES.REDHEART} style={styles.iconImage} resizeMode="contain" />
+              <Text style={styles.iconFont}>{item.postLikeCount}</Text>
+              <View style={{ width: 8 }} />
+              <Image source={IMAGES.EYE} style={styles.iconImage} resizeMode="contain" />
+              <Text style={styles.iconFont}>{item.viewCount}</Text>
+            </View>
+
+            <Text style={[
+              styles.statusBadge, { backgroundColor: statusDisplayMap[item.status].color }
+            ]}>
+              {statusDisplayMap[item.status].text}
+            </Text>
           </View>
         </View>
       </View>
     </TouchableOpacity>
   );
-
-
 
   return (
     <View style={styles.container}>
@@ -164,11 +172,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "gray",
     marginRight: wp(1.5),
+    marginLeft: hp(1.5),
   },
   title: {
     fontSize: wp(3.8),
     fontWeight: "600",
     maxWidth: wp(50),
+    marginLeft: hp(1),
   },
   priceFont: {
     fontSize: wp(4),
@@ -177,11 +187,17 @@ const styles = StyleSheet.create({
     marginBottom: hp(0.3),
     marginLeft: hp(1.5),
   },
+  contentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '90%',
+    marginTop: hp(0.5),
+    marginLeft: hp(1.5),
+  },
   iconRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: hp(0.5),
-    marginLeft: hp(1.5),
   },
   iconFont: {
     fontSize: wp(2.8),
@@ -193,6 +209,15 @@ const styles = StyleSheet.create({
   iconImage: {
     height: wp(4),
     width: wp(4),
+  },
+  statusBadge: {
+    fontSize: wp(3.5),
+    fontWeight: 'bold',
+    color: 'white',
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: 5,
+    overflow: 'hidden',
   },
   additBtn: {
     alignItems: "center",

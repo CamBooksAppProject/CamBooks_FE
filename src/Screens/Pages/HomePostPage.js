@@ -7,15 +7,16 @@ import {
     TextInput,
     Text,
     ScrollView,
-    SafeAreaView,
     Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import IMAGES from '../../../assets';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import { BASE_URL } from '@env';
 
 export default function HomePostPage({ navigation }) {
     const [selectedOptions, setSelectedOptions] = useState({
@@ -43,131 +44,192 @@ export default function HomePostPage({ navigation }) {
         return /^(?:\d{10}|\d{13})$/.test(cleanIsbn);
     };
 
-    const handleSelectPhoto = async () => {
-        if (images.length >= 4) return;
+    const handleSelectImage = async () => {
+        if (images.length >= 4) {
+            Alert.alert("사진은 최대 4장까지 등록 가능합니다.");
+            return;
+        }
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+            Alert.alert("권한이 필요합니다", "사진첩 접근 권한을 허용해주세요.");
+            return;
+        }
 
-        if (!result.canceled) {
-            const selectedUri = result.assets[0].uri;
-            setImages(prev => [...prev, { uri: selectedUri }]);
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images"],
+                allowsMultipleSelection: true,
+                allowsEditing: false,
+                quality: 1,
+            });
+
+            if (!result.canceled) {
+                const selectedUris = result.assets.map((asset) => asset.uri);
+
+                const allowedCount = Math.min(4 - images.length, selectedUris.length);
+                if (allowedCount < selectedUris.length) {
+                    Alert.alert("사진은 최대 4장까지 등록 가능합니다.");
+                }
+
+                const allowedUris = selectedUris.slice(0, allowedCount);
+                setImages([...images, ...allowedUris.map(uri => ({ uri }))]);
+            }
+        } catch (e) {
+            console.error("사진첩 열기 에러:", e);
         }
     };
 
-    const handleTakePhoto = async () => {
-        if (images.length >= 4) return;
-
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            const photoUri = result.assets[0].uri;
-            setImages(prev => [...prev, { uri: photoUri }]);
-        }
-    };
 
     const removeImage = (index) => {
         setImages(prev => prev.filter((_, i) => i !== index));
     };
 
-    const postTrade = async () => {
-        const memberId = await AsyncStorage.getItem('userId');
-        const url = `http://localhost:8080/cambooks/used-trade/${memberId}`;
-        const token = await AsyncStorage.getItem('accessToken');
-        if (!token) throw new Error('로그인이 필요합니다.');
+    const fetchBookByISBN = async (isbn) => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error('로그인이 필요합니다.');
 
-        const tradeMethod = selectedOptions.direct ? 'DIRECT' : selectedOptions.delivery ? 'DELIVERY' : '';
-        if (!title.trim() || !content.trim() || !tradeMethod || isNaN(Number(price))) {
-            throw new Error('입력값을 확인하세요.!!');
+            const url = `${BASE_URL}/search/isbn?isbn=${isbn}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`서버 에러: ${text}`);
+            }
+
+            const data = await response.json();
+
+            // 필요한 필드만 추출
+            if (data.items && data.items.length > 0) {
+                const book = data.items[0];
+                return {
+                    title: book.title,
+                    author: book.author,
+                    publisher: book.publisher,
+                    discount: book.discount,
+                    image: book.image,
+                    isbn: book.isbn,
+                };
+            } else {
+                return null;
+            }
+        } catch (e) {
+            console.error('책 정보 가져오기 실패:', e);
+            return null;
         }
-
-        if (!title.trim()) {
-            Alert.alert('제목을 입력해주세요.');
-            return;
-        }
-
-        if (!content.trim()) {
-            Alert.alert('내용을 입력해주세요.');
-            return;
-        }
-
-        if (!price.trim() || isNaN(Number(price))) {
-            Alert.alert('가격을 숫자로 입력해주세요.');
-            return;
-        }
-
-        if (isbn && !isValidISBN(isbn)) {
-            Alert.alert('유효하지 않은 ISBN입니다. 10자리 또는 13자리 숫자를 입력하세요.');
-            return;
-        }
-
-        if (images.length === 0) {
-            Alert.alert('최소 1장의 사진을 반드시 첨부해야 합니다.');
-            return;
-        }
-
-        const dto = {
-            title: title.trim(),
-            content: content.trim(),
-            price: Number(price),
-            tradeMethod,
-            isbn: isbn.trim(),
-        };
-
-        const dtoFileUri = FileSystem.cacheDirectory + 'dto.json';
-        await FileSystem.writeAsStringAsync(dtoFileUri, JSON.stringify(dto), { encoding: FileSystem.EncodingType.UTF8 });
-
-        const formData = new FormData();
-
-        formData.append('dto', {
-            uri: dtoFileUri,
-            name: 'dto.json',
-            type: 'application/json',
-        });
-
-        images.forEach((img, i) => {
-            const uri = img.uri;
-            const filename = uri.split('/').pop() || `photo_${i}.jpg`;
-            let type = 'image/jpeg';
-            const ext = filename.split('.').pop().toLowerCase();
-            if (ext === 'png') type = 'image/png';
-
-            formData.append('images', { uri, name: filename, type });
-        });
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            console.error('서버 응답:', text);
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('응답 데이터:', data);
-
-        navigation.reset({
-            index: 0,
-            routes: [{ name: 'RouteScreen', state: { routes: [{ name: 'HomeScreen' }] } }],
-        });
     };
+
+
+    const postTrade = async () => {
+        try {
+            const memberId = await AsyncStorage.getItem('userId');
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error('로그인이 필요합니다.');
+
+            const url = `${BASE_URL}/cambooks/used-trade/${memberId}`;
+            const tradeMethod = selectedOptions?.direct
+                ? 'DIRECT'
+                : selectedOptions?.delivery
+                    ? 'DELIVERY'
+                    : '';
+
+            if (!title.trim()) return Alert.alert('제목을 입력해주세요.');
+            if (!content.trim()) return Alert.alert('내용을 입력해주세요.');
+            if (!price.trim() || isNaN(Number(price)))
+                return Alert.alert('가격을 숫자로 입력해주세요.');
+            if (!tradeMethod)
+                return Alert.alert('거래 방식을 선택해주세요. (직거래 또는 택배거래)');
+            if (isbn && !isValidISBN(isbn))
+                return Alert.alert('유효하지 않은 ISBN입니다. 10자리 또는 13자리 숫자를 입력하세요.');
+            if (images.length < 2) {
+                return Alert.alert('최소 2장의 사진을 반드시 첨부해야 합니다.');
+            }
+
+
+            let bookInfo = null;
+            if (isbn) {
+                bookInfo = await fetchBookByISBN(isbn);
+            }
+
+
+            Alert.alert(
+                '네이버 최저가 확인',
+                bookInfo?.title
+                    ? `책 제목: ${bookInfo.title}\n네이버 최저가: ${bookInfo.discount ? `${Number(bookInfo.discount).toLocaleString()}원` : ''}`
+                    : '최저가 정보를 찾을 수 없습니다.\n그래도 등록하시겠습니까?',
+                [
+                    {
+                        text: '취소',
+                        style: 'cancel',
+                    },
+                    {
+                        text: '확인',
+                        onPress: async () => {
+                            const dto = {
+                                title: title.trim(),
+                                content: content.trim(),
+                                price: Number(price),
+                                tradeMethod,
+                                isbn: isbn.trim(),
+                            };
+
+                            const dtoFileUri = FileSystem.cacheDirectory + 'dto.json';
+                            await FileSystem.writeAsStringAsync(dtoFileUri, JSON.stringify(dto), {
+                                encoding: FileSystem.EncodingType.UTF8,
+                            });
+
+                            const formData = new FormData();
+                            formData.append('dto', {
+                                uri: dtoFileUri,
+                                name: 'dto.json',
+                                type: 'application/json',
+                            });
+
+                            images.forEach((img, i) => {
+                                const uri = img.uri;
+                                const filename = uri.split('/').pop() || `photo_${i}.jpg`;
+                                const ext = filename.split('.').pop().toLowerCase();
+                                const type = ext === 'png' ? 'image/png' : 'image/jpeg';
+                                formData.append('images', { uri, name: filename, type });
+                            });
+
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: { Authorization: `Bearer ${token}` },
+                                body: formData,
+                            });
+
+                            if (!response.ok) {
+                                const text = await response.text();
+                                console.error('서버 응답:', text);
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'RouteScreen', state: { routes: [{ name: 'HomeScreen' }] } }],
+                            });
+                        },
+                    },
+                ]
+            );
+        } catch (e) {
+            console.error('postTrade 에러:', e);
+            Alert.alert('오류 발생', e.message);
+        }
+    };
+
 
     return (
         <View style={styles.container}>
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: wp('4%') }}>
                     <Image
@@ -182,11 +244,7 @@ export default function HomePostPage({ navigation }) {
             <View style={styles.middleView}>
                 <ScrollView>
                     <View style={[styles.photoContainer, { marginBottom: hp(2) }]}>
-                        <TouchableOpacity style={styles.photoEdit} onPress={handleTakePhoto}>
-                            <FontAwesome name="camera" size={wp(5)} color="black" />
-                            <Text style={styles.photoText}>카메라</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.photoEdit, { marginLeft: wp(3) }]} onPress={handleSelectPhoto}>
+                        <TouchableOpacity style={[styles.photoEdit, { marginLeft: wp(3) }]} onPress={handleSelectImage}>
                             <FontAwesome name="image" size={wp(5)} color="black" />
                             <Text style={styles.photoText}>{images.length}/4</Text>
                         </TouchableOpacity>
@@ -307,12 +365,13 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
     },
     topView: {
-        height: hp('10%'),
+        height: hp(5),
         justifyContent: 'center',
     },
     middleView: {
         flex: 1,
         backgroundColor: 'white',
+        marginTop: hp(2),
     },
     bottomView: {
         height: hp('8%'),

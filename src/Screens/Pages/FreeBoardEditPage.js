@@ -7,12 +7,13 @@ import {
     TextInput,
     Text,
     ScrollView,
-    SafeAreaView,
     Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import IMAGES from '../../../assets';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function FreeBoardEditPage({ navigation, route }) {
     const { postId } = route.params;
@@ -21,8 +22,6 @@ export default function FreeBoardEditPage({ navigation, route }) {
     const [content, setContent] = useState('');
     const [contentAlertShown, setContentAlertShown] = useState(false);
     const [loading, setLoading] = useState(true);
-
-    const BASE_URL = 'http://localhost:8080';
 
     useEffect(() => {
         fetchPostDetail();
@@ -97,7 +96,7 @@ export default function FreeBoardEditPage({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: wp('4%') }}>
                     <Image
@@ -156,7 +155,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
     },
     topView: {
-        height: hp('10%'),
+        height: hp('5'),
         justifyContent: 'center',
     },
     middleView: {

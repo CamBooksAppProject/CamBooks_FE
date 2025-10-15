@@ -9,18 +9,17 @@ import {
   FlatList,
 } from "react-native";
 import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
-import IMAGES from "../../../assets";
-import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { MaterialIcons } from "@expo/vector-icons";
+    widthPercentageToDP as wp,
+    heightPercentageToDP as hp,
+} from 'react-native-responsive-screen';
+import IMAGES from '../../../assets';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function FreeBoardPage() {
-  const navigation = useNavigation();
-  const [items, setItems] = useState([]);
-  const BASE_URL = "http://localhost:8080";
+    const navigation = useNavigation();
+    const [items, setItems] = useState([]);
 
   useFocusEffect(
     useCallback(() => {

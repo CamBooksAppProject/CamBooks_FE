@@ -9,70 +9,72 @@ import {
   FlatList,
 } from "react-native";
 import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
-import IMAGES from "../../../assets";
-import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { MaterialIcons } from "@expo/vector-icons";
+    widthPercentageToDP as wp,
+    heightPercentageToDP as hp,
+} from 'react-native-responsive-screen';
+import IMAGES from '../../../assets';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function FreeBoardPage() {
-  const navigation = useNavigation();
-  const [posts, setPosts] = useState([]);
+    const navigation = useNavigation();
+    const [posts, setPosts] = useState([]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchPosts();
-    }, [])
-  );
+    useFocusEffect(
+        useCallback(() => {
+            fetchPosts();
+        }, [])
+    );
 
-  const fetchPosts = async () => {
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
+    const fetchPosts = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
 
-      const response = await fetch(
-        "http://localhost:8080/cambooks/general-forum",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
+            const response = await fetch(`${BASE_URL}/cambooks/general-forum`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error('불러오기 실패:', errText);
+                return;
+            }
+
+            const data = await response.json();
+
+            const postsWithCommentCount = await Promise.all(
+                data.map(async (post) => {
+                    const commentCount = await fetchCommentCount(post.id);
+                    return { ...post, commentCount };
+                })
+            );
+
+            setPosts(postsWithCommentCount);
+        } catch (err) {
+            console.error('게시글 불러오기 실패:', err);
         }
-      );
+    };
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("불러오기 실패:", errText);
-        return;
-      }
-
-      const data = await response.json();
-
-      const postsWithCommentCount = await Promise.all(
-        data.map(async (post) => {
-          const commentCount = await fetchCommentCount(post.id);
-          return { ...post, commentCount };
-        })
-      );
-
-      setPosts(postsWithCommentCount);
-    } catch (err) {
-      console.error("게시글 불러오기 실패:", err);
-    }
-  };
-
-  const fetchCommentCount = async (postId) => {
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
-      const res = await fetch(
-        `http://localhost:8080/cambooks/general-forum/comment/count?postId=${postId}`,
-        {
-          headers: {
-            Accept: "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
+    const fetchCommentCount = async (postId) => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            const res = await fetch(`${BASE_URL}/cambooks/general-forum/comment/count?postId=${postId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+            if (!res.ok) throw new Error('댓글 수 조회 실패');
+            const count = await res.json();
+            return count; // 숫자 반환
+        } catch (err) {
+            console.error(`댓글 수 조회 실패 postId:${postId}`, err);
+            return 0;
         }
       );
       if (!res.ok) throw new Error("댓글 수 조회 실패");

@@ -7,12 +7,13 @@ import {
     TextInput,
     Text,
     ScrollView,
-    SafeAreaView,
     Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import IMAGES from '../../../assets';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function FreeBoardPostPage({ navigation }) {
     const [title, setTitle] = useState('');
@@ -28,7 +29,7 @@ export default function FreeBoardPostPage({ navigation }) {
         try {
             const token = await AsyncStorage.getItem('accessToken');
 
-            const response = await fetch('http://localhost:8080/cambooks/general-forum', {
+            const response = await fetch(`${BASE_URL}/cambooks/general-forum`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -47,10 +48,6 @@ export default function FreeBoardPostPage({ navigation }) {
                 return;
             }
 
-            const result = await response.json();
-            console.log('작성 성공:', result);
-
-
             navigation.navigate('RouteScreen', {
                 screen: 'FreeBoardPage',
                 params: { selectedTab: '자유게시판' },
@@ -67,7 +64,7 @@ export default function FreeBoardPostPage({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.navigate("RouteScreen")} style={{ marginLeft: wp('4%') }}>
                     <Image
@@ -127,7 +124,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
     },
     topView: {
-        height: hp('10%'),
+        height: hp(5),
         justifyContent: 'center',
     },
     middleView: {

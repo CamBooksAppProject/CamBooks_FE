@@ -7,14 +7,15 @@ import {
     TextInput,
     Text,
     ScrollView,
-    SafeAreaView,
     Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import IMAGES from '../../../assets';
 import { Picker } from '@react-native-picker/picker';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function CommnunityEditPage({ navigation, route }) {
     const { postId } = route.params;
@@ -34,8 +35,6 @@ export default function CommnunityEditPage({ navigation, route }) {
         '서울', '부산', '대구', '인천', '광주', '대전', '울산',
         '세종', '제주', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남',
     ];
-
-    const BASE_URL = 'http://localhost:8080';
 
     useEffect(() => {
         fetchPostDetail();
@@ -146,7 +145,7 @@ export default function CommnunityEditPage({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <SafeAreaView />
+            <SafeAreaView edges={['top']} />
             <View style={styles.topView}>
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
@@ -246,7 +245,7 @@ export default function CommnunityEditPage({ navigation, route }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: 'white' },
-    topView: { height: hp('10%'), justifyContent: 'center' },
+    topView: { height: hp(5), justifyContent: 'center' },
     middleView: { flex: 1, backgroundColor: 'white', paddingHorizontal: wp(4) },
     label: {
         fontSize: wp(4),

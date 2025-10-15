@@ -14,13 +14,13 @@ import {
 import IMAGES from '../../../assets';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '@env';
 
 export default function CommunScreen() {
     const navigation = useNavigation();
     const [posts, setPosts] = useState([]);
     const [selectedRegion, setSelectedRegion] = useState('전체');
     const [filteredPosts, setFilteredPosts] = useState([]);
-    const BASE_URL = 'http://localhost:8080';
 
     const regions = [
         '전체', '서울', '부산', '대구', '인천', '광주', '대전', '울산',
@@ -69,7 +69,7 @@ export default function CommunScreen() {
     const fetchCommentCount = async (postId) => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            const res = await fetch(`http://localhost:8080/cambooks/community/comment/count?postId=${postId}`, {
+            const res = await fetch(`${BASE_URL}/cambooks/community/comment/count?postId=${postId}`, {
                 headers: {
                     'Accept': 'application/json',
                     ...(token && { Authorization: `Bearer ${token}` }),
@@ -89,7 +89,7 @@ export default function CommunScreen() {
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) throw new Error("로그인이 필요합니다.");
 
-            const response = await fetch("http://localhost:8080/cambooks/community", {
+            const response = await fetch(`${BASE_URL}/cambooks/community`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`,
@@ -177,7 +177,7 @@ export default function CommunScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={{ height: hp(3), paddingHorizontal: wp(5.5), marginTop: hp(1) }}>
+            <View style={{ height: hp(4), paddingHorizontal: wp(5.5), marginTop: hp(1) }}>
                 <FlatList
                     data={regions}
                     horizontal
@@ -213,7 +213,7 @@ export default function CommunScreen() {
                     justifyContent: 'flex-start',
                     gap: wp(4),
                     paddingHorizontal: wp(5),
-                    paddingTop: hp(2),
+                    paddingTop: hp(1),
                 }}
                 ListEmptyComponent={
                     <Text style={styles.emptyText}>데이터 없음</Text>

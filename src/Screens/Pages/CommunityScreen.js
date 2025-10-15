@@ -4,10 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
 } from "react-native";
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -67,7 +65,7 @@ const CommunityScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']} >
       <View style={styles.fixedBar}>
         <View style={styles.horizontalBarContent}>
           {buttonData.map(renderButton)}
@@ -84,7 +82,7 @@ export default CommunityScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "white",
   },
   fixedBar: {
     backgroundColor: "#fff",
