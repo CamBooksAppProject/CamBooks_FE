@@ -16,6 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import IMAGES from "../../../assets";
+import api from "../../api/axiosInstance";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -26,7 +27,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     try {
       const response = await fetch(
-        "http://localhost:8080/cambooks/member/doLogin",
+        "http://192.168.0.23:8080/cambooks/member/doLogin",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -41,6 +42,16 @@ export default function LoginScreen() {
       const data = await response.json();
       await AsyncStorage.setItem("accessToken", data.token);
       await AsyncStorage.setItem("userId", String(data.id));
+      // Vue와 동일하게: 이메일을 로컬에 저장해 채팅에서 즉시 사용
+      try {
+        const me = await api.get("/member/info");
+        if (me?.data?.email) {
+          await AsyncStorage.setItem("email", me.data.email);
+        }
+      } catch (e) {
+        // 이메일 저장 실패는 치명적이지 않으니 무시하고 진행
+        console.log("/member/info 호출 실패:", e?.message || e);
+      }
 
       navigation.replace("RouteScreen"); // 로그인 성공 시 RouteScreen 이동
     } catch (error) {

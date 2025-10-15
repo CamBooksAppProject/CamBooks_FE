@@ -157,13 +157,16 @@ export default function CommuDetailPage({ navigation, route }) {
             console.error(err);
             Alert.alert('오류', '댓글 작성 중 문제가 발생했습니다.');
         }
-    };
+      );
 
+      if (!res.ok) throw new Error(`댓글 불러오기 실패: ${res.status}`);
 
+      const text = await res.text();
 
-    const handleButtonPress = (button) => {
-        setFocusedButton(button);
-    };
+      if (!text || text.trim() === "" || text.trim() === "null") {
+        setComments([]);
+        return;
+      }
 
     const loadHeartStatus = async () => {
         try {
@@ -349,17 +352,20 @@ export default function CommuDetailPage({ navigation, route }) {
             console.error("댓글 삭제 실패:", e);
             Alert.alert("오류", "댓글 삭제 중 문제가 발생했습니다.");
         }
-    };
+      );
 
+      if (!res.ok && res.status !== 204)
+        throw new Error(`삭제 실패: ${res.status}`);
 
-    if (!post) {
-        return (
-            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Text>로딩 중...</Text>
-            </View>
-        );
+      console.log("댓글 삭제 완료");
+      await fetchComments();
+    } catch (e) {
+      console.error("댓글 삭제 실패:", e);
+      Alert.alert("오류", "댓글 삭제 중 문제가 발생했습니다.");
     }
+  };
 
+  if (!post) {
     return (
         <View style={styles.container}>
             <SafeAreaView edges={['top']} />
@@ -369,18 +375,49 @@ export default function CommuDetailPage({ navigation, route }) {
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.middleView}>
-                <ScrollView>
-                    <View style={styles.mainView}>
-                        <View style={styles.photo}>
-                            {post.imgUrls && post.imgUrls.length > 0 ? (
-                                <Image
-                                    source={{ uri: post.imgUrls[0].startsWith('http') ? post.imgUrls[0] : `${BASE_URL}${post.imgUrls[0]}` }}
-                                    resizeMode="cover"
-                                    style={{ width: '100%', height: '100%', borderRadius: 10 }}
-                                />
-                            ) : null}
-                        </View>
+            <View style={{ flexDirection: "column", marginLeft: 15, flex: 1 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 15,
+                }}
+              >
+                <Text style={styles.titleFont}>{post.title || "제목"}</Text>
+                <TouchableOpacity
+                  style={{ marginLeft: "auto" }}
+                  onPress={() => setShowOptions(!showOptions)}
+                >
+                  <Image
+                    source={IMAGES.THREEDOT}
+                    resizeMode="contain"
+                    style={{ height: 12, width: 12 }}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {showOptions && (
+                <View style={styles.popup}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowOptions(false);
+                      console.log("신고하기");
+                    }}
+                  >
+                    <Text style={styles.popupItem}>신고하기</Text>
+                  </TouchableOpacity>
+
+                  {myUserId === post.userId && (
+                    <>
+                      <View style={styles.popupDivider} />
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowOptions(false);
+                          navigation.navigate("CommunityEditPage", { postId });
+                        }}
+                      >
+                        <Text style={styles.popupItem}>수정하기</Text>
+                      </TouchableOpacity>
 
                         <View style={{ flexDirection: 'column', marginLeft: 15, flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
@@ -434,31 +471,170 @@ export default function CommuDetailPage({ navigation, route }) {
                         </View>
                     </View>
 
-                    <View style={{ flexDirection: 'row', marginTop: 20, justifyContent: 'center' }}>
-                        <TouchableOpacity
-                            style={[styles.btn3, focusedButton === '모집공고' && styles.btnFocused]}
-                            onPress={() => handleButtonPress('모집공고')}
-                        >
-                            <Text style={[styles.btnText, focusedButton === '모집공고' && styles.btnTextFocused]}>
-                                모집공고
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.btn3, focusedButton === '동아리소개' && styles.btnFocused]}
-                            onPress={() => handleButtonPress('동아리소개')}
-                        >
-                            <Text style={[styles.btnText, focusedButton === '동아리소개' && styles.btnTextFocused]}>
-                                동아리소개
-                            </Text>
-                        </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowOptions(false);
+                          handleDeleteAlert();
+                        }}
+                      >
+                        <Text style={styles.popupItem}>삭제하기</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              )}
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
+                <Image
+                  source={IMAGES.PEOPLE}
+                  resizeMode="contain"
+                  style={{ height: 13, width: 13 }}
+                />
+                <Text style={styles.peopleFont}>
+                  {post.currentParticipants} / {post.maxParticipants}
+                </Text>
+                <Text style={styles.regionFont}>
+                  {getKoreanRegion(post.region)}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: "row", marginBottom: 4 }}>
+                <Text style={styles.timeLabel}>모집 시작일: </Text>
+                <Text style={styles.timeFont}>
+                  {formatDateTime(post.startDateTime)}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row" }}>
+                <Text style={styles.timeLabel}>모집 종료일: </Text>
+                <Text style={styles.timeFont}>
+                  {formatDateTime(post.endDateTime)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              marginTop: 20,
+              justifyContent: "center",
+            }}
+          >
+            <TouchableOpacity
+              style={[
+                styles.btn3,
+                focusedButton === "모집공고" && styles.btnFocused,
+              ]}
+              onPress={() => handleButtonPress("모집공고")}
+            >
+              <Text
+                style={[
+                  styles.btnText,
+                  focusedButton === "모집공고" && styles.btnTextFocused,
+                ]}
+              >
+                모집공고
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.btn3,
+                focusedButton === "동아리소개" && styles.btnFocused,
+              ]}
+              onPress={() => handleButtonPress("동아리소개")}
+            >
+              <Text
+                style={[
+                  styles.btnText,
+                  focusedButton === "동아리소개" && styles.btnTextFocused,
+                ]}
+              >
+                동아리소개
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ padding: 15 }}>
+            {focusedButton === "모집공고" ? (
+              <Text style={styles.contentsFont}>
+                {post.recruitment || "모집공고 내용이 없습니다."}
+              </Text>
+            ) : (
+              <Text style={styles.contentsFont}>
+                {post.introduction || "동아리소개 내용이 없습니다."}
+              </Text>
+            )}
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginTop: 25,
+              paddingHorizontal: 20,
+            }}
+          >
+            <TouchableOpacity>
+              <Text style={{ fontSize: 11, color: "gray" }}>신고하기</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.btn2,
+                { backgroundColor: isJoined ? "#67574D" : "#67574D" },
+              ]}
+              onPress={handleJoinToggle}
+            >
+              <Text
+                style={{ fontSize: 11, fontWeight: "bold", color: "white" }}
+              >
+                {isJoined ? "참가 취소" : "참가하기"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.heartBtnView}
+              onPress={handleHeartPress}
+            >
+              <Image
+                source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
+                resizeMode="contain"
+                style={{ width: 20, height: 20 }}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.line} />
+
+          <View>
+            {comments.length > 0 ? (
+              comments.map((comment, idx) => {
+                const createdAtFormatted = formatCreatedAt(comment.createdAt);
+                const isMyComment = comment.userId === myUserId;
+
+                return (
+                  <View key={idx} style={styles.commentView}>
+                    <View style={styles.commentLeft}>
+                      <MaterialIcons
+                        name="account-circle"
+                        size={20}
+                        color="#ccc"
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={styles.commentName}>
+                        {comment?.name ?? "익명"}
+                      </Text>
                     </View>
 
-                    <View style={{ padding: 15 }}>
-                        {focusedButton === '모집공고' ? (
-                            <Text style={styles.contentsFont}>{post.recruitment || '모집공고 내용이 없습니다.'}</Text>
-                        ) : (
-                            <Text style={styles.contentsFont}>{post.introduction || '동아리소개 내용이 없습니다.'}</Text>
-                        )}
+                    <View style={styles.commentMiddle}>
+                      <Text style={styles.commentFont}>
+                        {comment?.content ?? ""}
+                      </Text>
                     </View>
 
                     <View
@@ -538,25 +714,42 @@ export default function CommuDetailPage({ navigation, route }) {
                             <Text style={{ textAlign: 'center', color: 'gray', marginTop: 10 }}>댓글이 없습니다.</Text>
                         )}
                     </View>
-                    <View style={{ height: 80 }} />
-                </ScrollView>
-            </View>
+                  </View>
+                );
+              })
+            ) : (
+              <Text
+                style={{ textAlign: "center", color: "gray", marginTop: 10 }}
+              >
+                댓글이 없습니다.
+              </Text>
+            )}
+          </View>
+          <View style={{ height: 80 }} />
+        </ScrollView>
+      </View>
 
-            <View style={styles.bottomView}>
-                <View style={styles.inputView}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="댓글을 입력하세요."
-                        value={commentText}
-                        onChangeText={setCommentText}
-                    />
-                    <TouchableOpacity style={styles.sendBtnView} onPress={handleCommentSubmit}>
-                        <Image source={IMAGES.SEND} style={{ width: 25, height: 25, tintColor: 'white' }} />
-                    </TouchableOpacity>
-                </View>
-            </View>
+      <View style={styles.bottomView}>
+        <View style={styles.inputView}>
+          <TextInput
+            style={styles.input}
+            placeholder="댓글을 입력하세요."
+            value={commentText}
+            onChangeText={setCommentText}
+          />
+          <TouchableOpacity
+            style={styles.sendBtnView}
+            onPress={handleCommentSubmit}
+          >
+            <Image
+              source={IMAGES.SEND}
+              style={{ width: 25, height: 25, tintColor: "white" }}
+            />
+          </TouchableOpacity>
         </View>
-    );
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

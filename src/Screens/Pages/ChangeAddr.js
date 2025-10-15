@@ -64,7 +64,11 @@ export default function ChangeAddr() {
       ]);
     } catch (err) {
       console.error(err);
-      Alert.alert("에러", "주소 저장 중 오류가 발생했습니다.");
+      const errorMessage =
+        err.response?.data?.message ||
+        err.response?.data ||
+        "주소 저장 중 오류가 발생했습니다.";
+      Alert.alert("에러", errorMessage);
     }
   };
 

@@ -2,7 +2,8 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
 
-const BASE_URL = "http://localhost:8080/cambooks";
+export const BASE_URL = "http://192.168.0.23:8080/cambooks";
+export const BASE_HOST = BASE_URL.replace(/\/?cambooks\/?$/, "");
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -11,12 +12,7 @@ const api = axios.create({
   },
 });
 
-const refreshApi = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+// 백엔드에 토큰 재발급(/member/refresh) API가 없으므로 별도 refreshApi 불필요
 
 api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem("accessToken");
@@ -55,42 +51,10 @@ api.interceptors.response.use(
         Alert.alert("입력 오류", "입력하신 정보를 다시 확인해주세요.");
         return Promise.reject(error);
       }
-
-      if (!originalRequest._retry) {
-        originalRequest._retry = true;
-        try {
-          const refreshToken = await AsyncStorage.getItem("refreshToken");
-
-          if (!refreshToken) {
-            await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
-            Alert.alert("로그인 만료", "로그인이 필요합니다.");
-            return Promise.reject(new Error("리프레시 토큰 없음"));
-          }
-
-          const res = await refreshApi.post(
-            "/member/refresh",
-            {},
-            {
-              headers: { Authorization: `Bearer ${refreshToken}` },
-            }
-          );
-
-          const newAccessToken = res.data.accessToken;
-          if (!newAccessToken) {
-            throw new Error("새로운 액세스 토큰 없음");
-          }
-
-          await AsyncStorage.setItem("accessToken", newAccessToken);
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-          return api(originalRequest);
-        } catch (refreshError) {
-          console.error("[Token Refresh Error]", refreshError);
-          await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
-          Alert.alert("로그인 만료", "다시 로그인해주세요.");
-          return Promise.reject(refreshError);
-        }
-      }
+      // 백엔드에 리프레시 토큰 플로우가 없으므로 바로 로그아웃 처리
+      await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
+      Alert.alert("로그인 만료", "다시 로그인해주세요.");
+      return Promise.reject(error);
     }
 
     if (error.response.status === 403) {
@@ -110,5 +74,76 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// 채팅 API 함수들
+export const chatApi = {
+  // 1대1 채팅방 생성 또는 기존 채팅방 가져오기
+  createOrGetPrivateRoom: async (memberId) => {
+    console.log("API 호출 시작 - memberId:", memberId);
+    const response = await api.post(
+      `/chat/room/private/create?otherMemberId=${memberId}`
+    );
+    console.log("API 응답:", response);
+    console.log("API 응답 데이터:", response.data);
+    console.log("응답 데이터 타입:", typeof response.data);
+    return response.data; // roomId 반환
+  },
+
+  // 내 채팅방 목록 조회
+  getMyChatRooms: async () => {
+    const response = await api.get("/chat/my/rooms");
+    return response.data;
+  },
+
+  // 채팅방 히스토리 조회
+  getChatHistory: async (roomId) => {
+    const response = await api.get(`/chat/history/${roomId}`);
+    return response.data;
+  },
+
+  // 채팅 메시지 읽음 처리
+  markAsRead: async (roomId) => {
+    const response = await api.post(`/chat/room/${roomId}/read`);
+    return response.data;
+  },
+
+  // 중고 게시글 상세 조회 (배너 상태 갱신용)
+  getUsedTradeDetail: async (postId) => {
+    const response = await api.get(`/used-trade/${postId}`);
+    return response.data;
+  },
+
+  // 채팅방 나가기
+  leaveChatRoom: async (roomId) => {
+    const response = await api.delete(`/chat/room/${roomId}/leave`);
+    return response.data;
+  },
+};
+
+// 프로필 이미지 업로드 및 내 정보 조회
+export const memberApi = {
+  uploadProfileImage: async (fileUri) => {
+    const form = new FormData();
+    const filename = fileUri.split("/").pop() || `photo.jpg`;
+    const ext = filename.includes(".") ? filename.split(".").pop() : "jpg";
+    form.append("file", {
+      uri: fileUri,
+      name: filename,
+      type: `image/${ext}`,
+    });
+    const response = await api.post("/member/profile-image", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data; // url
+  },
+  deleteProfileImage: async () => {
+    const response = await api.delete("/member/profile-image");
+    return response.data;
+  },
+  getMyInfo: async () => {
+    const response = await api.get("/member/info");
+    return response.data;
+  },
+};
 
 export default api;
