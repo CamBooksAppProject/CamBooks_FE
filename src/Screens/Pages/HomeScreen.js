@@ -24,23 +24,79 @@ const statusDisplayMap = {
   'COMPLETED': { text: '거래완료', color: '#B5534C' },
 };
 
+const universityList = [
+  { id: 1, name: "서울대" },
+  { id: 2, name: "강남대" },
+  { id: 3, name: "고려대" },
+  { id: 4, name: "연세대" },
+  { id: 5, name: "성균관대" },
+  { id: 6, name: "한국외국어대" },
+  { id: 7, name: "한양대" },
+  { id: 8, name: "중앙대" },
+  { id: 9, name: "경희대" },
+  { id: 10, name: "이화여자대" },
+  { id: 11, name: "동국대" },
+  { id: 12, name: "인천대" },
+  { id: 13, name: "서울시립대" },
+  { id: 14, name: "서강대" },
+  { id: 15, name: "포항공과대" },
+  { id: 16, name: "한국과학기술원" },
+  { id: 17, name: "광주과학기술원" },
+  { id: 18, name: "울산과학기술원" },
+  { id: 19, name: "경북대" },
+  { id: 20, name: "부산대" },
+  { id: 21, name: "경상국립대" },
+  { id: 22, name: "충북대" },
+  { id: 23, name: "전북대" },
+  { id: 24, name: "충남대" },
+  { id: 25, name: "전남대" },
+  { id: 26, name: "중앙대" },
+  { id: 27, name: "국민대" },
+  { id: 28, name: "명지대" },
+  { id: 29, name: "서울과학기술대" },
+  { id: 30, name: "세종대" },
+  { id: 31, name: "한국기술교육대" },
+  { id: 32, name: "한국예술종합" },
+];
+
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [items, setItems] = useState([]);
+  const [viewType, setViewType] = useState("all");
+  const [univName, setUnivName] = useState("");
 
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [])
+      loadUniversityName();
+    }, [viewType])
   );
+
+  const loadUniversityName = async () => {
+    try {
+      const storedId = await AsyncStorage.getItem("univId");
+      if (storedId) {
+        const found = universityList.find((u) => u.id === Number(storedId));
+        if (found) setUnivName(found.name);
+      }
+    } catch (e) {
+      console.log("univId 불러오기 실패:", e);
+    }
+  };
 
   const fetchData = async () => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
+      const univId = await AsyncStorage.getItem('univId');
 
       if (!token) throw new Error("로그인이 필요합니다.");
 
-      const response = await fetch(`${BASE_URL}/cambooks/used-trade`, {
+      let url = `${BASE_URL}/cambooks/used-trade`;
+      if (viewType === "university" && univId) {
+        url += `?universityId=${univId}`;
+      }
+
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -48,12 +104,9 @@ export default function HomeScreen() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json();
-
       setItems(Array.isArray(data) ? data : data.posts || []);
     } catch (error) {
       console.error("API 통신 오류:", error);
@@ -111,6 +164,30 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={{ padding: 5, marginHorizontal: 10 }}>
+        <View style={{ flexDirection: "row", justifyContent: "flex-end", alignItems: "center" }}>
+          <TouchableOpacity
+            onPress={() => setViewType("all")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={[styles.viewText, viewType === "all" && styles.activeView]}>
+              모두 보기
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={{ color: "black", marginHorizontal: 5 }}>|</Text>
+
+          <TouchableOpacity
+            onPress={() => setViewType("university")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={[styles.viewText, viewType === "university" && styles.activeView]}>
+              {univName}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <FlatList
         data={items}
         keyExtractor={(item) => item.id.toString()}
@@ -132,11 +209,22 @@ export default function HomeScreen() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFF",
   },
+  viewText: {
+    color: "black",
+    fontSize: wp(3.8),
+    fontWeight: "500",
+  },
+
+  activeView: {
+    fontWeight: "700",
+  },
+
   listView: {
     width: wp(92),
     height: hp(11),
