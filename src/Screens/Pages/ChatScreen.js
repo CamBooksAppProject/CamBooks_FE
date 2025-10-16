@@ -12,6 +12,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useState, useCallback } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Image } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 import { chatApi, BASE_HOST } from "../../api/axiosInstance";
 import IMAGES from "../../../assets";
 
@@ -48,6 +49,30 @@ export default function ChatScreen() {
     }, [])
   );
 
+  // 채팅방 나가기
+  const handleLeaveChatRoom = async (roomId) => {
+    Alert.alert("채팅방 나가기", "정말 채팅방을 나가시겠습니까?", [
+      {
+        text: "취소",
+        style: "cancel",
+      },
+      {
+        text: "나가기",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await chatApi.leaveChatRoom(roomId);
+            Alert.alert("성공", "채팅방을 나갔습니다.");
+            fetchChatRooms(); // 목록 새로고침
+          } catch (error) {
+            console.error("채팅방 나가기 실패:", error);
+            Alert.alert("오류", "채팅방 나가기에 실패했습니다.");
+          }
+        },
+      },
+    ]);
+  };
+
   // 시간 포맷 함수
   const formatTime = (dateString) => {
     if (!dateString) return "";
@@ -78,59 +103,78 @@ export default function ChatScreen() {
         : `${BASE_HOST}${item.profileImage}`
       : null;
 
-    return (
-      <TouchableOpacity
-        style={styles.rowContainer}
-        key={item.roomId}
-        onPress={() =>
-          navigation.navigate("ChatDetailPage", {
-            roomId: item.roomId,
-            roomName: item.roomName,
-            isGroupChat: item.isGroupChat,
-          })
-        }
-      >
-        {profileImageUri ? (
-          <Image
-            source={{ uri: profileImageUri }}
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              marginRight: 10,
-              backgroundColor: "#eee",
-            }}
-            resizeMode="cover"
-          />
-        ) : (
-          <MaterialIcons
-            name="account-circle"
-            size={50}
-            color="#ccc"
-            style={{ marginRight: 10 }}
-          />
-        )}
-        <View style={styles.textContainer}>
-          <View style={styles.nameTimeContainer}>
-            <Text style={styles.nameText}>{item.roomName}</Text>
-            <View style={styles.rightSection}>
-              {item.lastMessageTime && (
-                <Text style={styles.timeText}>
-                  {formatTime(item.lastMessageTime)}
-                </Text>
-              )}
-              {item.unReadCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadText}>{item.unReadCount}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-          <Text style={styles.chatMessage} numberOfLines={1}>
-            {item.lastMessage || "아직 메시지가 없습니다"}
-          </Text>
+    // 스와이프 시 나타나는 오른쪽 액션 버튼
+    const renderRightActions = (progress, dragX) => {
+      return (
+        <View style={styles.swipeActions}>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleLeaveChatRoom(item.roomId)}
+          >
+            <Text style={styles.deleteButtonText}>나가기</Text>
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      );
+    };
+
+    return (
+      <Swipeable
+        key={item.roomId}
+        renderRightActions={renderRightActions}
+        overshootRight={false}
+      >
+        <TouchableOpacity
+          style={styles.rowContainer}
+          onPress={() =>
+            navigation.navigate("ChatDetailPage", {
+              roomId: item.roomId,
+              roomName: item.roomName,
+              isGroupChat: item.isGroupChat,
+            })
+          }
+        >
+          {profileImageUri ? (
+            <Image
+              source={{ uri: profileImageUri }}
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: 25,
+                marginRight: 10,
+                backgroundColor: "#eee",
+              }}
+              resizeMode="cover"
+            />
+          ) : (
+            <MaterialIcons
+              name="account-circle"
+              size={50}
+              color="#ccc"
+              style={{ marginRight: 10 }}
+            />
+          )}
+          <View style={styles.textContainer}>
+            <View style={styles.nameTimeContainer}>
+              <Text style={styles.nameText}>{item.roomName}</Text>
+              <View style={styles.rightSection}>
+                {item.lastMessageTime && (
+                  <Text style={styles.timeText}>
+                    {formatTime(item.lastMessageTime)}
+                  </Text>
+                )}
+                {item.unReadCount > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadText}>{item.unReadCount}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            <Text style={styles.chatMessage} numberOfLines={1}>
+              {item.lastMessage || "아직 메시지가 없습니다"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -291,5 +335,26 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 12,
     fontWeight: "bold",
+  },
+  swipeActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingRight: 10,
+    marginLeft: 10,
+  },
+  deleteButton: {
+    backgroundColor: "#FF4444",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+  },
+  deleteButtonText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+    marginTop: 4,
   },
 });
