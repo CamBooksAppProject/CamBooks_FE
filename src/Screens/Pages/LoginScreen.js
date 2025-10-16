@@ -42,6 +42,7 @@ export default function LoginScreen() {
       const data = await response.json();
       await AsyncStorage.setItem("accessToken", data.token);
       await AsyncStorage.setItem("userId", String(data.id));
+      await AsyncStorage.setItem("univId", String(data.univId));
       // Vue와 동일하게: 이메일을 로컬에 저장해 채팅에서 즉시 사용
       try {
         const me = await api.get("/member/info");
