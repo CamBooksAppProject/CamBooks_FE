@@ -385,7 +385,12 @@ export default function SignUpScreen() {
                       responseText
                     );
                     if (response.status === 401) {
-                      Alert.alert("회원가입 실패", "이미 가입된 이메일입니다.");
+                      console.log("401 발생! 요청 payload:", {
+                        name, nickname, email, userId, password, universityValue, address
+                      });
+                      console.log("응답 headers:", [...response.headers.entries()]);
+                      console.log("응답 body:", responseText);
+                      Alert.alert("회원가입 실패", "이미 가입된 이메일이거나 인증 문제가 있습니다.");
                     } else if (response.status === 409) {
                       Alert.alert("회원가입 실패", "중복된 정보가 있습니다.");
                     } else {

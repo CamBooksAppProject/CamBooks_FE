@@ -74,13 +74,27 @@ export default function HomeScreen() {
 
   const loadUniversityName = async () => {
     try {
-      const storedId = await AsyncStorage.getItem("univId");
-      if (storedId) {
-        const found = universityList.find((u) => u.id === Number(storedId));
-        if (found) setUnivName(found.name);
-      }
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) throw new Error("로그인이 필요합니다.");
+
+      const res = await fetch(`${BASE_URL}/cambooks/member/info`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+      const data = await res.json();
+      const { univId } = data;
+
+      const found = universityList.find((u) => u.id === Number(univId));
+      if (found) setUnivName(found.name);
+      else setUnivName("대학교 정보 없음");
     } catch (e) {
-      console.log("univId 불러오기 실패:", e);
+      console.log("대학교 정보 불러오기 실패:", e);
     }
   };
 
