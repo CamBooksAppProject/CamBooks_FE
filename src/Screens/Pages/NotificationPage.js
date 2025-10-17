@@ -8,11 +8,19 @@ import {
 import { BASE_URL } from '@env';
 import IMAGES from '../../../assets';
 
+const NOTICE_TYPE_MAP = {
+    1: "앱 공지",
+    2: "채팅 알림",
+    3: "중고거래 게시글 알림",
+    4: "커뮤니티 게시글 알림",
+    5: "커뮤니티 댓글 알림",
+    6: "자유게시판 댓글 알림",
+};
+
 export default function NotificationPage({ navigation }) {
     const [notifications, setNotifications] = useState([]);
     const [myUserId, setMyUserId] = useState(null);
 
-    // userId 로드
     const loadMyUserId = async () => {
         try {
             const userIdStr = await AsyncStorage.getItem('userId');
@@ -23,7 +31,6 @@ export default function NotificationPage({ navigation }) {
         }
     };
 
-    // 알림 불러오기
     const fetchNotifications = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
@@ -46,6 +53,7 @@ export default function NotificationPage({ navigation }) {
             }
 
             const data = await res.json();
+            console.log(data)
             setNotifications(data);
         } catch (error) {
             console.log("fetch error:", error);
@@ -57,21 +65,25 @@ export default function NotificationPage({ navigation }) {
         fetchNotifications();
     }, []);
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.listView}
-            onPress={() => navigation.reset({
-                index: 0,
-                routes: [{ name: "FreeBoardDetailPage", params: { id: item.navigateId } }],
-            })}
-        >
-            <View style={styles.row}>
-                <Text style={styles.title}>{item.content}</Text>
-                <Text style={styles.timeFont}>{item.time}</Text>
-            </View>
-            <Text style={styles.contentsFont}>공지 타입: {item.noticeTypeId}</Text>
-        </TouchableOpacity >
-    );
+    const renderItem = ({ item }) => {
+        const typeLabel = NOTICE_TYPE_MAP[item.noticeTypeId] || "기타 알림";
+
+        return (
+            <TouchableOpacity
+                style={styles.listView}
+                onPress={() => navigation.reset({
+                    index: 0,
+                    routes: [{ name: "FreeBoardDetailPage", params: { id: item.navigateId } }],
+                })}
+            >
+                <View style={styles.row}>
+                    <Text style={styles.title}>{typeLabel}</Text>
+                    <Text style={styles.timeFont}>{item.createdTime}</Text>
+                </View>
+                <Text style={styles.contentsFont}>{item.content}</Text>
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -105,18 +117,19 @@ const styles = StyleSheet.create({
     },
     topView: {
         backgroundColor: 'white',
-        height: hp(5),
+        height: hp(6),
         justifyContent: 'center',
+        paddingHorizontal: wp(4),
     },
     middleView: {
         flex: 1,
     },
     listView: {
-        width: '100%',
+        width: wp(100),
         backgroundColor: 'white',
-        paddingVertical: 12,
-        paddingHorizontal: 18,
-        borderBottomWidth: 0.7,
+        paddingVertical: hp(1.5),
+        paddingHorizontal: wp(4),
+        borderBottomWidth: 0.5,
         borderBottomColor: '#e0e0e0',
     },
     row: {
@@ -125,21 +138,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     title: {
-        fontSize: 14,
+        fontSize: wp(4),
+        fontWeight: 'bold',
+        marginTop: hp(1),
+        marginLeft: wp(2),
+    },
+    contentsFont: {
+        fontSize: wp(3.5),
         fontWeight: 'bold',
         color: '#2d3436',
         flexShrink: 1,
-        marginLeft: 10,
-    },
-    contentsFont: {
-        fontSize: 12,
-        color: '#515a5a',
-        marginTop: 4,
-        marginLeft: 10,
+        marginLeft: wp(2),
     },
     timeFont: {
-        fontSize: 11,
+        fontSize: wp(2.5),
         color: '#aaa',
-        marginLeft: 10,
+        marginLeft: wp(2),
     },
 });

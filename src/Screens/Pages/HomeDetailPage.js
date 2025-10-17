@@ -617,11 +617,7 @@ export default function HomeDetailPage({ navigation, route }) {
                                 />
                             )}
                             <Text style={styles.chatFont}>
-                                {post.status === 'COMPLETED'
-                                    ? '거래완료'
-                                    : isChatLoading
-                                        ? '채팅방 생성 중...'
-                                        : '채팅하기'}
+                                {post.status === 'COMPLETED' ? '거래완료' : '채팅하기'}
                             </Text>
                         </TouchableOpacity>
 
