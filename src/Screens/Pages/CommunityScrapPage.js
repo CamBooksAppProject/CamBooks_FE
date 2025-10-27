@@ -72,29 +72,28 @@ export default function CommunScreen() {
 
             const likedPosts = likedData["COMMUNITY"] || [];
 
-            // id 중복 체크
-            const ids = likedPosts.map(post => post.id);
-            const uniqueIds = new Set(ids);
-            if (uniqueIds.size !== ids.length) {
-                console.warn("좋아요 게시글 id 중복 감지됨!");
-            }
+            const allKeys = await AsyncStorage.getAllKeys();
+            const likedKeys = allKeys.filter(key => key.startsWith('liked_community_'));
+            const likedEntries = await AsyncStorage.multiGet(likedKeys);
+            const likedPostIds = likedEntries
+                .filter(([_, value]) => value === 'true')
+                .map(([key]) => parseInt(key.replace('liked_community_', '')));
 
-            // 로컬에 저장된 스크랩 정보 키 조회 (예: scrapped_community_게시글id)
-            const keys = await AsyncStorage.getAllKeys();
-            const scrappedKeys = keys.filter(key => key.startsWith('scrapped_community_'));
-            const entries = await AsyncStorage.multiGet(scrappedKeys);
-            const scrappedPostIds = entries
+            const scrappedKeys = allKeys.filter(key => key.startsWith('scrapped_community_'));
+            const scrappedEntries = await AsyncStorage.multiGet(scrappedKeys);
+            const scrappedPostIds = scrappedEntries
                 .filter(([_, value]) => value === 'true')
                 .map(([key]) => parseInt(key.replace('scrapped_community_', '')));
 
-            // 각 게시글에 댓글 수와 로컬 스크랩 상태 추가
             const merged = await Promise.all(
                 likedPosts.map(async (post) => {
+                    const isLiked = likedPostIds.includes(post.id);
                     const isScrapped = scrappedPostIds.includes(post.id);
-                    const commentCount = await fetchCommentCount(post.id);  // 댓글 수 가져오는 함수
+                    const commentCount = await fetchCommentCount(post.id);
 
                     return {
                         ...post,
+                        isLiked,
                         isScrapped,
                         commentCount,
                     };
@@ -106,8 +105,6 @@ export default function CommunScreen() {
             console.error("스크랩 게시글 불러오기 실패:", error);
         }
     };
-
-
 
     const renderItem = ({ item }) => {
         const heartImage = item.isLiked ? IMAGES.REDHEART : IMAGES.EMPTYHEART;
