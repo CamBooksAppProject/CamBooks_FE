@@ -28,7 +28,7 @@ export default function CommnunityEditPage({ navigation, route }) {
     const [contentRecruit, setContentRecruit] = useState('');
     const [contentIntroduce, setContentIntroduce] = useState('');
     const [selectedRegion, setSelectedRegion] = useState('서울');
-
+    const [currentParticipants, setCurrentParticipants] = useState(0);
     const [loading, setLoading] = useState(true);
 
     const regions = [
@@ -59,6 +59,7 @@ export default function CommnunityEditPage({ navigation, route }) {
             setContentIntroduce(data.introduction);
             setSelectedRegion(data.region || '서울');
             setSelectedPeople(String(data.maxParticipants));
+            setCurrentParticipants(data.currentParticipants || 0);
             setStartDate(new Date(data.startDateTime));
             setEndDate(new Date(data.endDateTime));
             setImgUrls(data.imgUrls || []);  // 반드시 넣어주세요
@@ -78,6 +79,11 @@ export default function CommnunityEditPage({ navigation, route }) {
 
             if (!title.trim() || !contentRecruit.trim() || !contentIntroduce.trim()) {
                 alert('제목, 모집 공고, 동아리 소개를 모두 입력하세요.');
+                return;
+            }
+
+            if (parseInt(selectedPeople, 10) < currentParticipants) {
+                alert(`현재 ${currentParticipants}명이 참여 중입니다.\n참여 인원보다 적게 설정할 수 없습니다.`);
                 return;
             }
 

@@ -22,6 +22,8 @@ export default function CommuDetailPage({ navigation, route }) {
   const [showOptions, setShowOptions] = useState(false);
   const [myUserId, setMyUserId] = useState(null);
   const [visibleOptionId, setVisibleOptionId] = useState(null);
+  const [isAuthor, setIsAuthor] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
 
 
   const regionMap = {
@@ -75,15 +77,28 @@ export default function CommuDetailPage({ navigation, route }) {
     fetchPostDetail();
     fetchComments();
     loadHeartStatus();
-    loadJoinStatus();
     loadMyUserId();
+    handleJoinToggle();
+    checkMyPost();
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       fetchPostDetail();
+      checkMyPost();
     }, [postId])
   );
+
+  const loadMyUserId = async () => {
+    try {
+      const userIdStr = await AsyncStorage.getItem('userId');
+      if (!userIdStr) return;
+      setMyUserId(Number(userIdStr));
+    } catch (e) {
+      console.error("userId 로드 실패:", e);
+    }
+  };
+
 
   const fetchPostDetail = async () => {
     try {
@@ -102,6 +117,17 @@ export default function CommuDetailPage({ navigation, route }) {
 
       const data = await response.json();
       setPost(data);
+      const { currentParticipants, maxParticipants, endDateTime } = data;
+
+      // 현재 시간과 종료일 비교
+      const now = new Date();
+      const endDate = new Date(endDateTime);
+
+      if (currentParticipants >= maxParticipants || now > endDate) {
+        setIsClosed(true); // 참가 마감
+      } else {
+        setIsClosed(false); // 참가 가능
+      }
     } catch (error) {
       console.error('상세 API 오류:', error);
     }
@@ -212,16 +238,6 @@ export default function CommuDetailPage({ navigation, route }) {
     }
   };
 
-  const loadJoinStatus = async () => {
-    try {
-      const key = `joined_community_${postId}`;
-      const saved = await AsyncStorage.getItem(key);
-      if (saved === 'true') setIsJoined(true);
-    } catch (e) {
-      console.error('참가 상태 불러오기 실패:', e);
-    }
-  };
-
   const handleJoinToggle = async () => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
@@ -236,7 +252,17 @@ export default function CommuDetailPage({ navigation, route }) {
         },
       });
 
-      if (!response.ok) throw new Error('참가 토글 실패');
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('서버 응답:', text);
+        throw new Error('참가 토글 실패');
+      }
+
+      const data = await response.json();
+
+      // 서버에서 반환되는 데이터 확인
+      console.log('서버 응답 데이터:', data);
 
       // 참가 상태 반전
       const newJoinStatus = !isJoined;
@@ -250,24 +276,25 @@ export default function CommuDetailPage({ navigation, route }) {
           : Math.max(prev.currentParticipants - 1, 0),
       }));
 
-      if (newJoinStatus) {
-        await AsyncStorage.setItem(`joined_community_${postId}`, 'true');
-      } else {
-        await AsyncStorage.removeItem(`joined_community_${postId}`);
-      }
-
     } catch (error) {
       console.error('참가 토글 실패:', error);
     }
   };
 
-  const loadMyUserId = async () => {
-    try {
-      const userIdStr = await AsyncStorage.getItem('userId');
-      if (!userIdStr) return;
-      setMyUserId(Number(userIdStr));
-    } catch (e) {
-      console.error("userId 로드 실패:", e);
+
+  const checkMyPost = async () => {
+    const token = await AsyncStorage.getItem("accessToken");
+    if (!token) return;
+
+    const res = await fetch(`${BASE_URL}/cambooks/community/check/${postId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.status === 200) {
+      setIsAuthor(true);
+    } else {
+      setIsAuthor(false);
     }
   };
 
@@ -469,14 +496,26 @@ export default function CommuDetailPage({ navigation, route }) {
               marginTop: 25,
             }}
           >
-            <TouchableOpacity
-              style={[styles.btn2, { backgroundColor: isJoined ? '#67574D' : '#67574D' }]}
-              onPress={handleJoinToggle}
-            >
-              <Text style={{ fontSize: 11, fontWeight: 'bold', color: 'white' }}>
-                {isJoined ? '참가 취소' : '참가하기'}
-              </Text>
-            </TouchableOpacity>
+            {!isAuthor && (
+              <TouchableOpacity
+                style={[
+                  styles.btn2,
+                  {
+                    backgroundColor: isClosed || isJoined ? '#A0A0A0' : '#67574D',
+                  },
+                ]}
+                disabled={isClosed || isJoined}
+                onPress={handleJoinToggle}
+              >
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: 'white' }}>
+                  {isClosed
+                    ? '참가 마감'
+                    : isJoined
+                      ? '참가 중'
+                      : '참가하기'}
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.heartBtnView} onPress={handleHeartPress}>
               <Image
                 source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
