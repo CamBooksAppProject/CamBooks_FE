@@ -524,14 +524,28 @@ export default function CommuDetailPage({ navigation, route }) {
                 style={[
                   styles.btn2,
                   {
-                    backgroundColor: isClosed || isJoined ? '#A0A0A0' : '#67574D',
+                    backgroundColor: isJoined ? '#67574D' : isClosed ? '#A0A0A0' : '#67574D',
                   },
                 ]}
-                disabled={isClosed || isJoined}
-                onPress={handleJoinToggle}
+                disabled={isClosed && !isJoined}
+                onPress={() => {
+                  if (isJoined) {
+                    Alert.alert(
+                      "참가 취소",
+                      "해당 커뮤니티에서 나가시겠습니까?",
+                      [
+                        { text: "취소", style: "cancel" },
+                        { text: "확인", style: "destructive", onPress: handleJoinToggle }
+                      ],
+                      { cancelable: true }
+                    );
+                  } else {
+                    handleJoinToggle();
+                  }
+                }}
               >
                 <Text style={{ fontSize: 11, fontWeight: 'bold', color: 'white' }}>
-                  {isClosed
+                  {isClosed && !isJoined
                     ? '참가 마감'
                     : isJoined
                       ? '참가 중'
@@ -539,6 +553,7 @@ export default function CommuDetailPage({ navigation, route }) {
                 </Text>
               </TouchableOpacity>
             )}
+
             <TouchableOpacity style={styles.heartBtnView} onPress={handleHeartPress}>
               <Image
                 source={isHeartFilled ? IMAGES.REDHEART : IMAGES.EMPTYHEART}
