@@ -273,6 +273,9 @@ export default function CommuDetailPage({ navigation, route }) {
         currentParticipants: data.currentParticipants,
       }));
 
+      if (!data.isJoined) setIsClosed(false);
+      fetchPostDetail();
+
     } catch (error) {
       console.error('참가 토글 실패:', error);
     }
