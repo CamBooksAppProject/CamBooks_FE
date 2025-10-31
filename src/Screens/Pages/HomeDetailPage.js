@@ -85,17 +85,32 @@ export default function HomeDetailPage({ navigation, route }) {
 
     const loadHeartStatus = async () => {
         try {
-            const key = `liked_usedTrade_${postId}`;
-            const saved = await AsyncStorage.getItem(key);
-            setIsHeartFilled(saved === 'true');
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
+
+            const res = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                },
+            });
+
+            if (!res.ok) throw new Error(`좋아요 상태 불러오기 실패: ${res.status}`);
+
+            const data = await res.json();
+            const likedCommunities = data?.USED_TRADE || [];
+            const isLiked = likedCommunities.some(item => item.id === postId);
+
+            setIsHeartFilled(isLiked);
         } catch (e) {
             console.error('좋아요 상태 불러오기 실패:', e);
         }
     };
 
+
     const handleHeartPress = async () => {
         try {
-            const key = `liked_usedTrade_${postId}`;
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) throw new Error("로그인이 필요합니다.");
 
@@ -107,43 +122,21 @@ export default function HomeDetailPage({ navigation, route }) {
                 },
                 body: JSON.stringify({
                     postId: postId,
-                    postType: "USED_TRADE"
-                })
+                    postType: "USED_TRADE",
+                }),
             });
 
             if (!res.ok) throw new Error("좋아요 토글 실패");
-
             const newState = !isHeartFilled;
             setIsHeartFilled(newState);
 
-            // 2. AsyncStorage & 로컬 카운트 업데이트
-            if (newState) {
-                await AsyncStorage.setItem(key, 'true');
-                setPost(prev => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
-            } else {
-                await AsyncStorage.removeItem(key);
-                setPost(prev => ({ ...prev, postLikeCount: Math.max(prev.postLikeCount - 1, 0) }));
-            }
-
-            // 3. 좋아요 수 증가/감소 DB 반영
-            const countRes = await fetch(`${BASE_URL}/cambooks/post-likes/count`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    postId: postId,
-                    postType: "USED_TRADE"
-                })
-            });
-
-            if (!countRes.ok) {
-                console.warn("좋아요 수 증가/감소 실패:", countRes.status);
-            }
+            setPost(prev => ({
+                ...prev,
+                postLikeCount: Math.max(prev.postLikeCount + (newState ? 1 : -1), 0),
+            }));
 
         } catch (e) {
-            console.error("좋아요 처리 실패:", e);
+            console.error("좋아요 토글 실패:", e);
         }
     };
 

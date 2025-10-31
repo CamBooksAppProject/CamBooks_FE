@@ -73,21 +73,19 @@ export default function CommuDetailPage({ navigation, route }) {
   const getKoreanRegion = (regionCode) => regionMap[regionCode] || regionCode;
 
 
-  useEffect(() => {
-    fetchPostDetail();
-    fetchComments();
-    loadHeartStatus();
-    loadMyUserId();
-    handleJoinToggle();
-    checkMyPost();
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       fetchPostDetail();
       checkMyPost();
+      checkJoinStatus();
     }, [postId])
   );
+
+  useEffect(() => {
+    fetchComments();
+    loadHeartStatus();
+    loadMyUserId();
+  }, []);
 
   const loadMyUserId = async () => {
     try {
@@ -119,14 +117,13 @@ export default function CommuDetailPage({ navigation, route }) {
       setPost(data);
       const { currentParticipants, maxParticipants, endDateTime } = data;
 
-      // 현재 시간과 종료일 비교
       const now = new Date();
       const endDate = new Date(endDateTime);
 
       if (currentParticipants >= maxParticipants || now > endDate) {
-        setIsClosed(true); // 참가 마감
+        setIsClosed(true);
       } else {
-        setIsClosed(false); // 참가 가능
+        setIsClosed(false);
       }
     } catch (error) {
       console.error('상세 API 오류:', error);
@@ -186,25 +183,38 @@ export default function CommuDetailPage({ navigation, route }) {
     }
   };
 
-
-
   const handleButtonPress = (button) => {
     setFocusedButton(button);
   };
 
   const loadHeartStatus = async () => {
     try {
-      const key = `liked_community_${postId}`;
-      const saved = await AsyncStorage.getItem(key);
-      setIsHeartFilled(saved === 'true');
+      const token = await AsyncStorage.getItem('accessToken');
+      if (!token) throw new Error("로그인이 필요합니다.");
+
+      const res = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!res.ok) throw new Error(`좋아요 상태 불러오기 실패: ${res.status}`);
+
+      const data = await res.json();
+      const likedCommunities = data?.COMMUNITY || [];
+      const isLiked = likedCommunities.some(item => item.id === postId);
+
+      setIsHeartFilled(isLiked);
     } catch (e) {
       console.error('좋아요 상태 불러오기 실패:', e);
     }
   };
 
+
   const handleHeartPress = async () => {
     try {
-      const key = `liked_community_${postId}`;
       const token = await AsyncStorage.getItem('accessToken');
       if (!token) throw new Error("로그인이 필요합니다.");
 
@@ -217,7 +227,7 @@ export default function CommuDetailPage({ navigation, route }) {
         body: JSON.stringify({
           postId: postId,
           postType: "COMMUNITY"
-        })
+        }),
       });
 
       if (!res.ok) throw new Error("좋아요 토글 실패");
@@ -225,25 +235,21 @@ export default function CommuDetailPage({ navigation, route }) {
       const newState = !isHeartFilled;
       setIsHeartFilled(newState);
 
-      if (newState) {
-        await AsyncStorage.setItem(key, 'true');
-        setPost(prev => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
-      } else {
-        await AsyncStorage.removeItem(key);
-        setPost(prev => ({ ...prev, postLikeCount: Math.max(prev.postLikeCount - 1, 0) }));
-      }
-
+      setPost(prev => ({
+        ...prev,
+        postLikeCount: Math.max(prev.postLikeCount + (newState ? 1 : -1), 0),
+      }));
     } catch (e) {
       console.error("좋아요 토글 실패:", e);
     }
   };
+
 
   const handleJoinToggle = async () => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
       if (!token) throw new Error('로그인이 필요합니다.');
 
-      // join API 단일 호출로 토글 처리
       const response = await fetch(`${BASE_URL}/cambooks/community/join/${postId}`, {
         method: 'POST',
         headers: {
@@ -252,7 +258,6 @@ export default function CommuDetailPage({ navigation, route }) {
         },
       });
 
-
       if (!response.ok) {
         const text = await response.text();
         console.error('서버 응답:', text);
@@ -260,26 +265,44 @@ export default function CommuDetailPage({ navigation, route }) {
       }
 
       const data = await response.json();
-
-      // 서버에서 반환되는 데이터 확인
       console.log('서버 응답 데이터:', data);
 
-      // 참가 상태 반전
-      const newJoinStatus = !isJoined;
-      setIsJoined(newJoinStatus);
-
-      // 참가자 수 증가/감소
+      setIsJoined(data.isJoined);
       setPost(prev => ({
         ...prev,
-        currentParticipants: newJoinStatus
-          ? prev.currentParticipants + 1
-          : Math.max(prev.currentParticipants - 1, 0),
+        currentParticipants: data.currentParticipants,
       }));
 
     } catch (error) {
       console.error('참가 토글 실패:', error);
     }
   };
+
+  const checkJoinStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      if (!token) return;
+
+      const res = await fetch(`${BASE_URL}/cambooks/community/join/${postId}/is-joined`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        console.error('참여 상태 조회 실패:', res.status);
+        return;
+      }
+
+      const data = await res.json();
+      setIsJoined(data);
+    } catch (err) {
+      console.error('참여 상태 확인 오류:', err);
+    }
+  };
+
 
 
   const checkMyPost = async () => {

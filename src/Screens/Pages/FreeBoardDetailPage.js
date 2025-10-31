@@ -121,9 +121,24 @@ export default function FreeBoardDetailPage({ route, navigation }) {
 
     const loadHeartStatus = async () => {
         try {
-            const key = `liked_generalForum_${postId}`;
-            const saved = await AsyncStorage.getItem(key);
-            setIsHeartFilled(saved === 'true');
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) throw new Error("로그인이 필요합니다.");
+
+            const res = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                },
+            });
+
+            if (!res.ok) throw new Error(`좋아요 상태 불러오기 실패: ${res.status}`);
+
+            const data = await res.json();
+            const likedCommunities = data?.GENERAL_FORUM || [];
+            const isLiked = likedCommunities.some(item => item.id === postId);
+
+            setIsHeartFilled(isLiked);
         } catch (e) {
             console.error('좋아요 상태 불러오기 실패:', e);
         }
@@ -131,7 +146,6 @@ export default function FreeBoardDetailPage({ route, navigation }) {
 
     const handleHeartPress = async () => {
         try {
-            const key = `liked_generalForum_${postId}`;
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) throw new Error("로그인이 필요합니다.");
 
@@ -144,21 +158,17 @@ export default function FreeBoardDetailPage({ route, navigation }) {
                 body: JSON.stringify({
                     postId: postId,
                     postType: "GENERAL_FORUM"
-                })
+                }),
             });
 
             if (!res.ok) throw new Error("좋아요 토글 실패");
-
             const newState = !isHeartFilled;
             setIsHeartFilled(newState);
 
-            if (newState) {
-                await AsyncStorage.setItem(key, 'true');
-                setPost(prev => ({ ...prev, postLikeCount: prev.postLikeCount + 1 }));
-            } else {
-                await AsyncStorage.removeItem(key);
-                setPost(prev => ({ ...prev, postLikeCount: Math.max(prev.postLikeCount - 1, 0) }));
-            }
+            setPost(prev => ({
+                ...prev,
+                postLikeCount: Math.max(prev.postLikeCount + (newState ? 1 : -1), 0),
+            }));
 
         } catch (e) {
             console.error("좋아요 토글 실패:", e);
