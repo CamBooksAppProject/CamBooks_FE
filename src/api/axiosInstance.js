@@ -118,6 +118,16 @@ export const chatApi = {
     const response = await api.delete(`/chat/room/${roomId}/leave`);
     return response.data;
   },
+  // 그룹 채팅방 나가기
+  leaveGroupChatRoom: async (roomId) => {
+    const response = await api.delete(`/chat/room/group/${roomId}/leave`);
+    return response.data;
+  },
+  // 채팅방 참여자 조회
+  getRoomParticipants: async (roomId) => {
+    const response = await api.get(`/chat/room/${roomId}/participants`);
+    return response.data; // expect array of members {email, nickname, profileImage}
+  },
 };
 
 // 프로필 이미지 업로드 및 내 정보 조회

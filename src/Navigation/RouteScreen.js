@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -22,6 +22,7 @@ import ChatScreen from "../Screens/Pages/ChatScreen";
 import ScrapScreen from "../Screens/Pages/ScrapScreen";
 import CommunityScreen from "../Screens/Pages/CommunityScreen";
 import ProfileScreen from "../Screens/Pages/ProfileScreen";
+import api, { chatApi } from "../api/axiosInstance";
 
 const BottomTab = createBottomTabNavigator();
 
@@ -125,7 +126,7 @@ const Header = ({ name, navigation }) => (
   </SafeAreaView >
 );
 
-const BottomTabIcon = (name, focused) => {
+const BottomTabIcon = (name, focused, badgeCount = 0) => {
   const icons = {
     중고거래: IMAGES.HOME,
     커뮤니티: IMAGES.COMMUNITY,
@@ -144,6 +145,11 @@ const BottomTabIcon = (name, focused) => {
           { tintColor: focused ? "#474747" : "#D1D1D1" },
         ]}
       />
+      {badgeCount > 0 && name === "채팅" && (
+        <View style={styles.badgeContainer}>
+          <Text style={styles.badgeText}>{badgeCount}</Text>
+        </View>
+      )}
       <Text
         style={[
           styles.bottomTabFont,
@@ -156,7 +162,7 @@ const BottomTabIcon = (name, focused) => {
   );
 };
 
-const TotalTab = (name, component, key, headerShown = true) => (
+const TotalTab = (name, component, key, headerShown = true, badgeCount = 0) => (
   <BottomTab.Screen
     name={key}
     component={component}
@@ -164,12 +170,39 @@ const TotalTab = (name, component, key, headerShown = true) => (
       header: headerShown
         ? () => <Header name={name} navigation={navigation} />
         : undefined,
-      tabBarIcon: ({ focused }) => BottomTabIcon(name, focused),
+      tabBarIcon: ({ focused }) => BottomTabIcon(name, focused, badgeCount),
     })}
   />
 );
 
 export default function RouteScreen({ navigation }) {
+  const [chatBadge, setChatBadge] = useState(0);
+
+  const refreshChatBadge = async () => {
+    try {
+      const rooms = await chatApi.getMyChatRooms();
+      if (Array.isArray(rooms)) {
+        const unread = rooms.reduce((acc, r) => acc + (r.unReadCount || r.unReadCnt || 0), 0);
+        setChatBadge(unread);
+      } else {
+        setChatBadge(0);
+      }
+    } catch (e) {
+      console.warn("채팅 배지 갱신 실패:", e);
+      setChatBadge(0);
+    }
+  };
+
+  useEffect(() => {
+    // initial fetch
+    refreshChatBadge();
+    // refresh when this screen (RouteScreen) regains focus
+    const unsub = navigation.addListener("focus", () => {
+      refreshChatBadge();
+    });
+    return unsub;
+  }, [navigation]);
+
   return (
     <BottomTab.Navigator
       screenOptions={{
@@ -179,7 +212,7 @@ export default function RouteScreen({ navigation }) {
     >
       {TotalTab("중고거래", HomeScreen, "HomeScreen")}
       {TotalTab("커뮤니티", CommunityScreen, "CommunityScreen")}
-      {TotalTab("채팅", ChatScreen, "ChatScreen")}
+      {TotalTab("채팅", ChatScreen, "ChatScreen", true, chatBadge)}
       {TotalTab("스크랩", ScrapScreen, "ScrapScreen")}
       {TotalTab("마이페이지", ProfileScreen, "ProfileScreen")}
     </BottomTab.Navigator>
@@ -248,5 +281,22 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     paddingHorizontal: wp(2.5),
     height: hp(10),
+  },
+  badgeContainer: {
+    position: 'absolute',
+    right: -6,
+    top: -6,
+    backgroundColor: '#FF3B30',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
