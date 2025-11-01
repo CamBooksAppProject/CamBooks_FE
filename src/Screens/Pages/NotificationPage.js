@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Image, FlatList, Text } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Image, FlatList, Text, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -60,6 +60,35 @@ export default function NotificationPage({ navigation }) {
         }
     };
 
+    const clearNotifications = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) {
+                console.warn("토큰 없음");
+                return;
+            }
+
+            const res = await fetch(`${BASE_URL}/cambooks/notification`, {
+                method: "DELETE",
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!res.ok) {
+                console.log("삭제 실패:", res.status);
+                return;
+            }
+
+            // 삭제 성공 시 상태 초기화
+            setNotifications([]);
+            Alert.alert("알림", "모든 알림이 삭제되었습니다.");
+        } catch (error) {
+            console.log("삭제 에러:", error);
+        }
+    };
+
     useEffect(() => {
         loadMyUserId();
         fetchNotifications();
@@ -68,13 +97,47 @@ export default function NotificationPage({ navigation }) {
     const renderItem = ({ item }) => {
         const typeLabel = NOTICE_TYPE_MAP[item.noticeTypeId] || "기타 알림";
 
+        let targetScreen = null;
+        let params = {};
+
+        switch (item.noticeTypeId) {
+            case 1:
+                targetScreen = "MyInfo";
+                break;
+            case 2:
+                targetScreen = "ChatScreen";
+                break;
+            case 3:
+                targetScreen = "HomeDetailPage";
+                params = { postId: item.navigateId };
+                break;
+            case 4:
+            case 5:
+                targetScreen = "CommuDetailPage";
+                params = { postId: item.navigateId };
+                break;
+            case 6:
+                targetScreen = "FreeBoardDetailPage";
+                params = { postId: item.navigateId };
+                break;
+            default:
+                targetScreen = null;
+        }
+
         return (
             <TouchableOpacity
                 style={styles.listView}
-                onPress={() => navigation.reset({
-                    index: 0,
-                    routes: [{ name: "FreeBoardDetailPage", params: { id: item.navigateId } }],
-                })}
+                onPress={() => {
+                    if (targetScreen) {
+                        if (item.noticeTypeId === 1 || item.noticeTypeId === 2) {
+                            navigation.navigate(targetScreen);
+                        } else {
+                            navigation.navigate(targetScreen, params);
+                        }
+                    } else {
+                        console.log("이동할 화면 없음:", item.noticeTypeId);
+                    }
+                }}
             >
                 <View style={styles.row}>
                     <Text style={styles.title}>{typeLabel}</Text>
@@ -85,9 +148,11 @@ export default function NotificationPage({ navigation }) {
         );
     };
 
+
     return (
         <View style={styles.container}>
             <SafeAreaView edges={['top']} />
+
             <View style={styles.topView}>
                 <TouchableOpacity onPress={() => navigation.navigate("RouteScreen")} style={{ marginLeft: 15 }}>
                     <Image
@@ -99,6 +164,12 @@ export default function NotificationPage({ navigation }) {
                 </TouchableOpacity>
             </View>
 
+            <View style={styles.clearButtonContainer}>
+                <TouchableOpacity onPress={clearNotifications}>
+                    <Text style={styles.clearButtonText}>알림 전체 삭제</Text>
+                </TouchableOpacity>
+            </View>
+
             <View style={styles.middleView}>
                 <FlatList
                     data={notifications}
@@ -107,6 +178,7 @@ export default function NotificationPage({ navigation }) {
                 />
             </View>
         </View>
+
     );
 }
 
@@ -145,7 +217,7 @@ const styles = StyleSheet.create({
     },
     contentsFont: {
         fontSize: wp(3.5),
-        fontWeight: 'bold',
+        fontWeight: '500',
         color: '#2d3436',
         flexShrink: 1,
         marginLeft: wp(2),
@@ -154,5 +226,16 @@ const styles = StyleSheet.create({
         fontSize: wp(2.5),
         color: '#aaa',
         marginLeft: wp(2),
+    },
+    clearButtonContainer: {
+        paddingHorizontal: wp(4),
+        alignItems: 'flex-end', // 오른쪽 정렬
+        backgroundColor: 'white',
+    },
+
+    clearButtonText: {
+        color: 'gray',
+        fontWeight: 'bold',
+        fontSize: wp(3.5),
     },
 });
