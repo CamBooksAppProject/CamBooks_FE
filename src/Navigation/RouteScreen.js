@@ -12,7 +12,7 @@ import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
-
+import { BASE_URL } from '@env';
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 
 import IMAGES from "../../assets";
@@ -26,7 +26,7 @@ import api, { chatApi } from "../api/axiosInstance";
 
 const BottomTab = createBottomTabNavigator();
 
-const Header = ({ name, navigation }) => (
+const Header = ({ name, navigation, notificationBadge }) => (
   <SafeAreaView style={{ backgroundColor: "white" }} edges={['top']}>
     < View style={styles.header} >
       {name === "중고거래" ? (
@@ -44,7 +44,11 @@ const Header = ({ name, navigation }) => (
               onPress={() => navigation.navigate("NotificationPage")}
             >
               <Ionicons name="notifications" size={26} color="#67574D" />
+              {notificationBadge > 0 && (
+                <View style={styles.headerBadgeContainer}></View>
+              )}
             </TouchableOpacity>
+
           </View>
         </View>
       ) : name === "커뮤니티" ? (
@@ -62,6 +66,9 @@ const Header = ({ name, navigation }) => (
               onPress={() => navigation.navigate("NotificationPage")}
             >
               <Ionicons name="notifications" size={26} color="#67574D" />
+              {notificationBadge > 0 && (
+                <View style={styles.headerBadgeContainer}></View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -73,6 +80,9 @@ const Header = ({ name, navigation }) => (
             onPress={() => navigation.navigate("NotificationPage")}
           >
             <Ionicons name="notifications" size={26} color="#67574D" />
+            {notificationBadge > 0 && (
+              <View style={styles.headerBadgeContainer}></View>
+            )}
           </TouchableOpacity>
         </View>
       ) : name === "스크랩" ? (
@@ -90,6 +100,9 @@ const Header = ({ name, navigation }) => (
               onPress={() => navigation.navigate("NotificationPage")}
             >
               <Ionicons name="notifications" size={26} color="#67574D" />
+              {notificationBadge > 0 && (
+                <View style={styles.headerBadgeContainer}></View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -118,6 +131,9 @@ const Header = ({ name, navigation }) => (
               onPress={() => navigation.navigate("NotificationPage")}
             >
               <Ionicons name="notifications" size={26} color="#67574D" />
+              {notificationBadge > 0 && (
+                <View style={styles.headerBadgeContainer}></View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -162,13 +178,13 @@ const BottomTabIcon = (name, focused, badgeCount = 0) => {
   );
 };
 
-const TotalTab = (name, component, key, headerShown = true, badgeCount = 0) => (
+const TotalTab = (name, component, key, headerShown = true, badgeCount = 0, notificationBadge = 0) => (
   <BottomTab.Screen
     name={key}
     component={component}
     options={({ navigation }) => ({
       header: headerShown
-        ? () => <Header name={name} navigation={navigation} />
+        ? () => <Header name={name} navigation={navigation} notificationBadge={notificationBadge} />
         : undefined,
       tabBarIcon: ({ focused }) => BottomTabIcon(name, focused, badgeCount),
     })}
@@ -177,6 +193,7 @@ const TotalTab = (name, component, key, headerShown = true, badgeCount = 0) => (
 
 export default function RouteScreen({ navigation }) {
   const [chatBadge, setChatBadge] = useState(0);
+  const [notificationBadge, setNotificationBadge] = useState(0);
 
   const refreshChatBadge = async () => {
     try {
@@ -193,12 +210,29 @@ export default function RouteScreen({ navigation }) {
     }
   };
 
+  const refreshNotificationBadge = async () => {
+    try {
+      const res = await api.get(`${BASE_URL}/cambooks/notification`);
+
+      if (Array.isArray(res.data)) {
+        setNotificationBadge(res.data.length);
+      } else {
+        setNotificationBadge(0);
+      }
+    } catch (e) {
+      console.warn("알림 배지 갱신 실패:", e);
+      setNotificationBadge(0);
+    }
+  };
+
+
   useEffect(() => {
-    // initial fetch
     refreshChatBadge();
-    // refresh when this screen (RouteScreen) regains focus
+    refreshNotificationBadge();
+
     const unsub = navigation.addListener("focus", () => {
       refreshChatBadge();
+      refreshNotificationBadge();
     });
     return unsub;
   }, [navigation]);
@@ -210,11 +244,11 @@ export default function RouteScreen({ navigation }) {
         tabBarStyle: styles.bottomTabStyle,
       }}
     >
-      {TotalTab("중고거래", HomeScreen, "HomeScreen")}
-      {TotalTab("커뮤니티", CommunityScreen, "CommunityScreen")}
-      {TotalTab("채팅", ChatScreen, "ChatScreen", true, chatBadge)}
-      {TotalTab("스크랩", ScrapScreen, "ScrapScreen")}
-      {TotalTab("마이페이지", ProfileScreen, "ProfileScreen")}
+      {TotalTab("중고거래", HomeScreen, "HomeScreen", true, 0, notificationBadge)}
+      {TotalTab("커뮤니티", CommunityScreen, "CommunityScreen", true, 0, notificationBadge)}
+      {TotalTab("채팅", ChatScreen, "ChatScreen", true, chatBadge, notificationBadge)}
+      {TotalTab("스크랩", ScrapScreen, "ScrapScreen", true, 0, notificationBadge)}
+      {TotalTab("마이페이지", ProfileScreen, "ProfileScreen", true, 0, notificationBadge)}
     </BottomTab.Navigator>
   );
 }
@@ -298,5 +332,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: '700',
+  },
+  headerBadgeContainer: {
+    position: 'absolute',
+    right: 2,
+    top: 2,
+    backgroundColor: '#FF3B30',
+    minWidth: 8,
+    height: 8,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
   },
 });

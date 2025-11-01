@@ -121,7 +121,6 @@ export default function CommuDetailPage({ navigation, route }) {
 
       const data = await response.json();
       setPost(data);
-      return data;
       const { currentParticipants, maxParticipants, endDateTime } = data;
 
       const now = new Date();
@@ -132,6 +131,7 @@ export default function CommuDetailPage({ navigation, route }) {
       } else {
         setIsClosed(false);
       }
+      return data;
     } catch (error) {
       console.error("상세 API 오류:", error);
     }
@@ -643,8 +643,8 @@ export default function CommuDetailPage({ navigation, route }) {
                     backgroundColor: isJoined
                       ? "#67574D"
                       : isClosed
-                      ? "#A0A0A0"
-                      : "#67574D",
+                        ? "#A0A0A0"
+                        : "#67574D",
                   },
                 ]}
                 disabled={isClosed && !isJoined}
@@ -674,8 +674,8 @@ export default function CommuDetailPage({ navigation, route }) {
                   {isClosed && !isJoined
                     ? "참가 마감"
                     : isJoined
-                    ? "참가 중"
-                    : "참가하기"}
+                      ? "참가 중"
+                      : "참가하기"}
                 </Text>
               </TouchableOpacity>
             )}
