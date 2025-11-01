@@ -317,25 +317,7 @@ const ChatDetailPage = ({ route }) => {
         finalList = finalUnique;
         console.log("설정된 참여자 목록(서버->정규화->최종):", finalList);
 
-        if (finalList.length <= 1) {
-          console.log(
-            "서버 참여자에 현재 사용자만 있음 — 히스토리 기반 추가 검토"
-          );
-          const extracted = extractParticipants(chatMessages, currentUserEmail);
-          const merged = [...finalList];
-          const seenKeys = new Set(merged.map((p) => p.email || p.nickname));
-          extracted.forEach((p) => {
-            const key = p.email || p.nickname;
-            if (!seenKeys.has(key)) {
-              merged.push(p);
-              seenKeys.add(key);
-            }
-          });
-          console.log("서버+히스토리 병합 참여자 목록:", merged);
-          setParticipants(merged);
-        } else {
-          setParticipants(finalList);
-        }
+        setParticipants(finalList);
       } catch (e) {
         console.warn(
           "참여자 목록 조회 실패, 히스토리에서 추출한 참여자 사용",
