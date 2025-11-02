@@ -33,8 +33,11 @@ export default function CommuPostPage({ navigation }) {
     const [introduceAlertShown, setIntroduceAlertShown] = useState(false);
 
     const regions = [
-        '서울', '부산', '대구', '인천', '광주', '대전', '울산',
-        '세종', '제주', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남',
+        '서울', '인천', '경기',
+        '부산', '대구', '광주', '대전', '울산',
+        '세종',
+        '강원', '충북', '충남', '전북', '전남', '경북', '경남',
+        '제주'
     ];
 
     const handleSelectImage = async () => {
@@ -93,11 +96,23 @@ export default function CommuPostPage({ navigation }) {
             }
 
             const regionMap = {
-                '서울': 'SEOUL', '부산': 'BUSAN', '대구': 'DAEGU', '인천': 'INCHEON',
-                '광주': 'GWANGJU', '대전': 'DAEJEON', '울산': 'ULSAN', '세종': 'SEJONG',
-                '제주': 'JEJU', '경기': 'GYEONGGI', '강원': 'GANGWON', '충북': 'CHUNGBUK',
-                '충남': 'CHUNGNAM', '전북': 'JEONBUK', '전남': 'JEONNAM', '경북': 'GYEONGBUK',
+                '서울': 'SEOUL',
+                '인천': 'INCHEON',
+                '경기': 'GYEONGGI',
+                '부산': 'BUSAN',
+                '대구': 'DAEGU',
+                '광주': 'GWANGJU',
+                '대전': 'DAEJEON',
+                '울산': 'ULSAN',
+                '세종': 'SEJONG',
+                '강원': 'GANGWON',
+                '충북': 'CHUNGBUK',
+                '충남': 'CHUNGNAM',
+                '전북': 'JEONBUK',
+                '전남': 'JEONNAM',
+                '경북': 'GYEONGBUK',
                 '경남': 'GYEONGNAM',
+                '제주': 'JEJU',
             };
 
             const dto = {
