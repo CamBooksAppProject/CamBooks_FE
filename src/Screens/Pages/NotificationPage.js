@@ -146,6 +146,12 @@ export default function NotificationPage({ navigation }) {
             <TouchableOpacity
                 style={styles.listView}
                 onPress={() => {
+
+                    if (item.content.includes("삭제")) {
+                        Alert.alert("알림", "게시물이 삭제되어 이동할 수 없습니다.");
+                        return;
+                    }
+
                     if (targetScreen) {
                         if (item.noticeTypeId === 1 || item.noticeTypeId === 2) {
                             navigation.navigate(targetScreen);
