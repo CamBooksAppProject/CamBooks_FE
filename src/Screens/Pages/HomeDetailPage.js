@@ -466,14 +466,23 @@ export default function HomeDetailPage({ navigation, route }) {
                         <Text style={styles.tradeMethodFont}>
                             {Array.isArray(post.tradeMethod)
                                 ? post.tradeMethod
-                                    .map((method) => (method === "DIRECT" ? "직거래" : method === "DELIVERY" ? "택배거래" : "기타"))
+                                    .map((method) =>
+                                        method === "DIRECT"
+                                            ? "직거래"
+                                            : method === "DELIVERY"
+                                                ? "택배거래"
+                                                : "기타"
+                                    )
                                     .join(" / ")
                                 : post.tradeMethod === "DIRECT"
                                     ? "직거래"
                                     : post.tradeMethod === "DELIVERY"
                                         ? "택배거래"
-                                        : "기타"}
+                                        : post.tradeMethod === "ALL"
+                                            ? "직거래 · 택배거래"
+                                            : "기타"}
                         </Text>
+
 
                         <Text style={styles.contentsFont}>{post.content}</Text>
 

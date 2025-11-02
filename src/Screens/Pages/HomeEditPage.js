@@ -155,8 +155,8 @@ export default function HomeEditPage({ navigation, route }) {
                                 content,
                                 price: parseInt(price, 10),
                                 isbn,
-                                tradeMethod,
-                                status
+                                tradeMethod: tradeMethod === 'ALL' ? 'ALL' : tradeMethod,
+                                status,
                             };
 
                             const res = await fetch(`${BASE_URL}/cambooks/used-trade/${postId}?memberId=${userId}`, {
@@ -251,26 +251,41 @@ export default function HomeEditPage({ navigation, route }) {
                     onChangeText={setIsbn}
                 />
 
-                <Text style={styles.label}>거래 방식 (1개 선택)</Text>
+                <Text style={styles.label}>거래 방식</Text>
                 <View style={styles.optionsRow}>
-                    {['DIRECT', 'DELIVERY'].map(method => {
-                        const isSelected = tradeMethod === method;
+                    {['DIRECT', 'DELIVERY'].map((method) => {
+                        const isSelected =
+                            tradeMethod === method || tradeMethod === 'ALL';
                         return (
                             <TouchableOpacity
                                 key={method}
                                 style={[
                                     styles.optionBtn,
-                                    isSelected && styles.optionSelected
+                                    isSelected && styles.optionSelected,
                                 ]}
-                                onPress={() => setTradeMethod(method)}
+                                onPress={() => {
+                                    if (tradeMethod === method) {
+                                        setTradeMethod('');
+                                    } else if (
+                                        (tradeMethod === 'DIRECT' && method === 'DELIVERY') ||
+                                        (tradeMethod === 'DELIVERY' && method === 'DIRECT')
+                                    ) {
+                                        setTradeMethod('ALL');
+                                    } else {
+                                        setTradeMethod(method);
+                                    }
+                                }}
                             >
-                                <Text style={isSelected ? styles.optionTextSelected : styles.optionText}>
+                                <Text
+                                    style={isSelected ? styles.optionTextSelected : styles.optionText}
+                                >
                                     {method === 'DIRECT' ? '직거래' : '택배거래'}
                                 </Text>
                             </TouchableOpacity>
                         );
                     })}
                 </View>
+
 
 
                 <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>

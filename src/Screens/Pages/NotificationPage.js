@@ -48,7 +48,11 @@ export default function NotificationPage({ navigation }) {
             });
 
             if (!res.ok) {
-                console.log("서버 응답 에러:", res.status);
+                if (res.status === 500) {
+                    console.log("가져올 데이터 없음");
+                } else {
+                    console.log("서버 응답 에러:", res.status);
+                }
                 return;
             }
 
@@ -87,6 +91,20 @@ export default function NotificationPage({ navigation }) {
         } catch (error) {
             console.log("삭제 에러:", error);
         }
+    };
+
+    const formatCreatedAt = (createdAt) => {
+        const date = new Date(createdAt);
+
+        // 한국 시간으로 변환 (UTC → KST)
+        const koreaTime = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+
+        const month = String(koreaTime.getMonth() + 1).padStart(2, '0');
+        const day = String(koreaTime.getDate()).padStart(2, '0');
+        const hour = String(koreaTime.getHours()).padStart(2, '0');
+        const minute = String(koreaTime.getMinutes()).padStart(2, '0');
+
+        return `${month}월 ${day}일 ${hour}시 ${minute}분`;
     };
 
     useEffect(() => {
@@ -141,7 +159,7 @@ export default function NotificationPage({ navigation }) {
             >
                 <View style={styles.row}>
                     <Text style={styles.title}>{typeLabel}</Text>
-                    <Text style={styles.timeFont}>{item.createdTime}</Text>
+                    <Text style={styles.timeFont}>{formatCreatedAt(item.createdAt)}</Text>
                 </View>
                 <Text style={styles.contentsFont}>{item.content}</Text>
             </TouchableOpacity>
@@ -166,7 +184,7 @@ export default function NotificationPage({ navigation }) {
 
             <View style={styles.clearButtonContainer}>
                 <TouchableOpacity onPress={clearNotifications}>
-                    <Text style={styles.clearButtonText}>알림 전체 삭제</Text>
+                    <Text style={styles.clearButtonText}>전체 삭제</Text>
                 </TouchableOpacity>
             </View>
 
@@ -224,15 +242,14 @@ const styles = StyleSheet.create({
     },
     timeFont: {
         fontSize: wp(2.5),
-        color: '#aaa',
+        color: 'gray',
         marginLeft: wp(2),
     },
     clearButtonContainer: {
         paddingHorizontal: wp(4),
-        alignItems: 'flex-end', // 오른쪽 정렬
+        alignItems: 'flex-end',
         backgroundColor: 'white',
     },
-
     clearButtonText: {
         color: 'gray',
         fontWeight: 'bold',
