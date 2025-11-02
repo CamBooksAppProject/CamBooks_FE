@@ -33,12 +33,14 @@ export default function HomePostPage({ navigation }) {
 
 
     const toggleOption = (option) => {
-        setSelectedOptions({
-            direct: option === 'direct',
-            delivery: option === 'delivery',
+        setSelectedOptions((prev) => {
+            const newOptions = {
+                ...prev,
+                [option]: !prev[option], // 클릭한 옵션만 토글
+            };
+            return newOptions;
         });
     };
-
     const isValidISBN = (isbn) => {
         const cleanIsbn = isbn.replace(/[-\s]/g, '');
         return /^(?:\d{10}|\d{13})$/.test(cleanIsbn);
@@ -134,11 +136,14 @@ export default function HomePostPage({ navigation }) {
             if (!token) throw new Error('로그인이 필요합니다.');
 
             const url = `${BASE_URL}/cambooks/used-trade/${memberId}`;
-            const tradeMethod = selectedOptions?.direct
-                ? 'DIRECT'
-                : selectedOptions?.delivery
-                    ? 'DELIVERY'
-                    : '';
+            const tradeMethod =
+                selectedOptions.direct && selectedOptions.delivery
+                    ? 'ALL'
+                    : selectedOptions.direct
+                        ? 'DIRECT'
+                        : selectedOptions.delivery
+                            ? 'DELIVERY'
+                            : '';
 
             if (!title.trim()) return Alert.alert('제목을 입력해주세요.');
             if (!content.trim()) return Alert.alert('내용을 입력해주세요.');
@@ -278,26 +283,31 @@ export default function HomePostPage({ navigation }) {
                                 delivery: '택배거래',
                             }[optionKey];
 
+                            const isSelected = selectedOptions[optionKey];
+
                             return (
                                 <TouchableOpacity
                                     key={optionKey}
                                     style={[
                                         styles.optionsBtn,
-                                        { backgroundColor: selectedOptions[optionKey] ? '#67574D' : 'white' }
+                                        { backgroundColor: isSelected ? '#67574D' : 'white' },
                                     ]}
                                     onPress={() => toggleOption(optionKey)}
                                 >
-                                    <Text style={{
-                                        fontSize: wp('3.5%'),
-                                        fontWeight: 'bold',
-                                        color: selectedOptions[optionKey] ? 'white' : 'black'
-                                    }}>
+                                    <Text
+                                        style={{
+                                            fontSize: wp('3.5%'),
+                                            fontWeight: 'bold',
+                                            color: isSelected ? 'white' : 'black',
+                                        }}
+                                    >
                                         {label}
                                     </Text>
                                 </TouchableOpacity>
                             );
                         })}
                     </View>
+
 
                     <View style={styles.titleEdit}>
                         <TextInput

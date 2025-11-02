@@ -44,7 +44,7 @@ const Header = ({ name, navigation, notificationBadge }) => (
               onPress={() => navigation.navigate("NotificationPage")}
             >
               <Ionicons name="notifications" size={26} color="#67574D" />
-              {notificationBadge > 0 && (
+              {notificationBadge && (
                 <View style={styles.headerBadgeContainer}></View>
               )}
             </TouchableOpacity>
@@ -66,7 +66,7 @@ const Header = ({ name, navigation, notificationBadge }) => (
               onPress={() => navigation.navigate("NotificationPage")}
             >
               <Ionicons name="notifications" size={26} color="#67574D" />
-              {notificationBadge > 0 && (
+              {notificationBadge && (
                 <View style={styles.headerBadgeContainer}></View>
               )}
             </TouchableOpacity>
@@ -80,7 +80,7 @@ const Header = ({ name, navigation, notificationBadge }) => (
             onPress={() => navigation.navigate("NotificationPage")}
           >
             <Ionicons name="notifications" size={26} color="#67574D" />
-            {notificationBadge > 0 && (
+            {notificationBadge && (
               <View style={styles.headerBadgeContainer}></View>
             )}
           </TouchableOpacity>
@@ -100,7 +100,7 @@ const Header = ({ name, navigation, notificationBadge }) => (
               onPress={() => navigation.navigate("NotificationPage")}
             >
               <Ionicons name="notifications" size={26} color="#67574D" />
-              {notificationBadge > 0 && (
+              {notificationBadge && (
                 <View style={styles.headerBadgeContainer}></View>
               )}
             </TouchableOpacity>
@@ -178,7 +178,7 @@ const BottomTabIcon = (name, focused, badgeCount = 0) => {
   );
 };
 
-const TotalTab = (name, component, key, headerShown = true, badgeCount = 0, notificationBadge = 0) => (
+const TotalTab = (name, component, key, headerShown = true, badgeCount = 0, notificationBadge = false) => (
   <BottomTab.Screen
     name={key}
     component={component}
@@ -193,7 +193,7 @@ const TotalTab = (name, component, key, headerShown = true, badgeCount = 0, noti
 
 export default function RouteScreen({ navigation }) {
   const [chatBadge, setChatBadge] = useState(0);
-  const [notificationBadge, setNotificationBadge] = useState(0);
+  const [notificationBadge, setNotificationBadge] = useState(false);
 
   const refreshChatBadge = async () => {
     try {
@@ -214,17 +214,15 @@ export default function RouteScreen({ navigation }) {
     try {
       const res = await api.get(`${BASE_URL}/cambooks/notification`);
 
-      if (Array.isArray(res.data)) {
-        setNotificationBadge(res.data.length);
-      } else {
-        setNotificationBadge(0);
-      }
+      setNotificationBadge(Array.isArray(res.data) && res.data.length > 0);
+
     } catch (e) {
-      console.warn("알림 배지 갱신 실패:", e);
-      setNotificationBadge(0);
+      if (e.response?.status === 500 && !notificationBadge) {
+        console.log("가져올 데이터 없음");
+      }
+      setNotificationBadge(false);
     }
   };
-
 
   useEffect(() => {
     refreshChatBadge();
