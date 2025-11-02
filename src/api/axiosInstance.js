@@ -109,7 +109,7 @@ export const chatApi = {
 
   // 중고 게시글 상세 조회 (배너 상태 갱신용)
   getUsedTradeDetail: async (postId) => {
-    const response = await api.get(`/used-trade/${postId}`);
+    const response = await api.get(`/used-trade/${postId}/banner`);
     return response.data;
   },
 
