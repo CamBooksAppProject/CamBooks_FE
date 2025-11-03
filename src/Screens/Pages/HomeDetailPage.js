@@ -66,6 +66,7 @@ export default function HomeDetailPage({ navigation, route }) {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
+            console.log(data);
 
             let bookInfo = null;
             if (data.isbn) {
@@ -328,7 +329,7 @@ export default function HomeDetailPage({ navigation, route }) {
                     title: post.title,
                     price: post.price,
                     thumbnail: firstImage,
-                    badgeText: "판매중",
+                    badgeText: post.status,
                 },
             };
 
