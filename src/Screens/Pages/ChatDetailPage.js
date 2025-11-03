@@ -644,9 +644,9 @@ const ChatDetailPage = ({ route }) => {
               // 타입 필드 비교는 대소문자 차이를 무시하도록 안전하게 처리
               const msgType = String(
                 messageData?.type ||
-                  messageData?.event ||
-                  messageData?.action ||
-                  ""
+                messageData?.event ||
+                messageData?.action ||
+                ""
               ).toUpperCase();
               const textBody =
                 typeof messageData?.message === "string"
@@ -681,8 +681,8 @@ const ChatDetailPage = ({ route }) => {
                 let baseText = messageData?.message
                   ? messageData.message
                   : isLeaveEvent
-                  ? `${who}님이 채팅방을 나갔습니다.`
-                  : `${who}님이 채팅방에 들어왔습니다.`;
+                    ? `${who}님이 채팅방을 나갔습니다.`
+                    : `${who}님이 채팅방에 들어왔습니다.`;
                 const text = `----${baseText}----`;
 
                 const sysMsg = {
@@ -867,7 +867,12 @@ const ChatDetailPage = ({ route }) => {
         try {
           if (banner?.postId) {
             const detail = await chatApi.getUsedTradeDetail(banner.postId);
-            const newBadge = detail?.status === "SOLD" ? "판매완료" : "판매중";
+            const newBadge =
+              detail?.status === "COMPLETED"
+                ? "거래완료"
+                : detail?.status === "RESERVED"
+                  ? "예약중"
+                  : "판매중";
             setBanner((prev) => ({ ...(prev || {}), badgeText: newBadge }));
             await AsyncStorage.setItem(
               `chat_post_summary_${roomId}`,
