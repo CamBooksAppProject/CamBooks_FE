@@ -91,9 +91,10 @@ export default function CommunScreen() {
 
     const fetchData = async () => {
         try {
-            const token = await AsyncStorage.getItem('accessToken');
+            const token = await AsyncStorage.getItem("accessToken");
             if (!token) throw new Error("로그인이 필요합니다.");
 
+            // 전체 게시글 불러오기
             const response = await fetch(`${BASE_URL}/cambooks/community`, {
                 method: "GET",
                 headers: {
@@ -102,21 +103,28 @@ export default function CommunScreen() {
                 },
             });
 
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) throw new Error(`게시글 불러오기 실패: ${response.status}`);
             const data = await response.json();
             const postList = Array.isArray(data) ? data : data.posts || [];
 
-            const keys = await AsyncStorage.getAllKeys();
-            const likedKeys = keys.filter(key => key.startsWith('liked_community_'));
-            const entries = await AsyncStorage.multiGet(likedKeys);
+            // 좋아요 상태 불러오기
+            const likeRes = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json",
+                },
+            });
 
-            const likedPostIds = entries
-                .filter(([_, value]) => value === 'true')
-                .map(([key]) => parseInt(key.replace('liked_community_', '')));
+            if (!likeRes.ok) throw new Error(`좋아요 상태 불러오기 실패: ${likeRes.status}`);
 
+            const likeData = await likeRes.json();
+            const likedCommunities = likeData?.COMMUNITY || [];
+
+            // 각 게시글의 댓글 수 및 좋아요 여부 병합
             const merged = await Promise.all(
                 postList.map(async (post) => {
-                    const isLiked = likedPostIds.includes(post.id);
+                    const isLiked = likedCommunities.some((liked) => liked.id === post.id);
                     const commentCount = await fetchCommentCount(post.id);
                     return {
                         ...post,
@@ -128,7 +136,7 @@ export default function CommunScreen() {
 
             setPosts(merged);
         } catch (error) {
-            console.error("API 통신 오류:", error);
+            console.error("데이터 불러오기 실패:", error);
         }
     };
 

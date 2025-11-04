@@ -117,6 +117,27 @@ export default function SettingPage() {
     );
   };
 
+  const toggleChat = async (value) => {
+    setIsChatEnabled(value);
+    await AsyncStorage.setItem("isChatEnabled", value.toString());
+  };
+
+  const toggleCommunity = async (value) => {
+    setIsCommunityEnabled(value);
+    await AsyncStorage.setItem("isCommunityEnabled", value.toString());
+  };
+
+  // 첫 로드 시 저장된 값 불러오기
+  useEffect(() => {
+    const loadSwitchStates = async () => {
+      const chat = await AsyncStorage.getItem("isChatEnabled");
+      const community = await AsyncStorage.getItem("isCommunityEnabled");
+      if (chat !== null) setIsChatEnabled(chat === "true");
+      if (community !== null) setIsCommunityEnabled(community === "true");
+    };
+    loadSwitchStates();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topContainer}>
@@ -185,7 +206,7 @@ export default function SettingPage() {
               <Switch
                 style={styles.switchStyle}
                 value={isChatEnabled}
-                onValueChange={setIsChatEnabled}
+                onValueChange={toggleChat}
               />
             </View>
 
@@ -194,7 +215,7 @@ export default function SettingPage() {
               <Switch
                 style={styles.switchStyle}
                 value={isCommunityEnabled}
-                onValueChange={setIsCommunityEnabled}
+                onValueChange={toggleCommunity}
               />
             </View>
 

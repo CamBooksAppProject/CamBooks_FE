@@ -56,45 +56,33 @@ export default function CommunScreen() {
 
     const fetchScrappedPosts = async () => {
         try {
-            const token = await AsyncStorage.getItem('accessToken');
+            const token = await AsyncStorage.getItem("accessToken");
             if (!token) throw new Error("로그인이 필요합니다.");
 
-            const likedRes = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
+            // 좋아요 목록 요청
+            const res = await fetch(`${BASE_URL}/cambooks/post-likes/me`, {
                 method: "GET",
                 headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json",
                 },
             });
 
-            if (!likedRes.ok) throw new Error(`HTTP error! status: ${likedRes.status}`);
-            const likedData = await likedRes.json();
+            if (!res.ok) throw new Error(`좋아요 목록 불러오기 실패: ${res.status}`);
 
-            const likedPosts = likedData["COMMUNITY"] || [];
+            const data = await res.json();
 
-            const allKeys = await AsyncStorage.getAllKeys();
-            const likedKeys = allKeys.filter(key => key.startsWith('liked_community_'));
-            const likedEntries = await AsyncStorage.multiGet(likedKeys);
-            const likedPostIds = likedEntries
-                .filter(([_, value]) => value === 'true')
-                .map(([key]) => parseInt(key.replace('liked_community_', '')));
+            // COMMUNITY 항목만 사용
+            const communityPosts = data["COMMUNITY"] || [];
 
-            const scrappedKeys = allKeys.filter(key => key.startsWith('scrapped_community_'));
-            const scrappedEntries = await AsyncStorage.multiGet(scrappedKeys);
-            const scrappedPostIds = scrappedEntries
-                .filter(([_, value]) => value === 'true')
-                .map(([key]) => parseInt(key.replace('scrapped_community_', '')));
-
+            // 댓글 수, 좋아요 상태 추가
             const merged = await Promise.all(
-                likedPosts.map(async (post) => {
-                    const isLiked = likedPostIds.includes(post.id);
-                    const isScrapped = scrappedPostIds.includes(post.id);
-                    const commentCount = await fetchCommentCount(post.id);
+                communityPosts.map(async (post) => {
+                    const commentCount = post.postCommentCount ?? (await fetchCommentCount(post.id));
 
                     return {
                         ...post,
-                        isLiked,
-                        isScrapped,
+                        isLiked: true,
                         commentCount,
                     };
                 })
@@ -102,7 +90,7 @@ export default function CommunScreen() {
 
             setItems(merged);
         } catch (error) {
-            console.error("스크랩 게시글 불러오기 실패:", error);
+            console.error("COMMUNITY 좋아요 게시글 불러오기 실패:", error);
         }
     };
 
