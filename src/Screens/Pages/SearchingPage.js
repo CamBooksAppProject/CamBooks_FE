@@ -71,17 +71,6 @@ export default function SearchingPage({ navigation }) {
       </View>
 
       <View style={styles.viewContainer}>
-        <Text style={styles.searchTitle}>인기 검색</Text>
-        <View style={styles.tagContainer}>
-          {["전공책", "영어회화", "교육", "경제", "독학"].map((item, idx) => (
-            <TouchableOpacity key={idx} onPress={() => handleTagPress(item)}>
-              <View style={styles.popularTag}>
-                <Text style={styles.popularSearch}>{item}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
         <Text style={styles.searchTitle}>최근 검색</Text>
         <View style={styles.tagContainer}>
           {recentSearches.map((item, idx) => (
