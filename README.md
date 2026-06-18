@@ -35,6 +35,16 @@
    - 도서·커뮤니티·게시글을 한 곳에서 탐색
    - 관심 정보 스크랩 기능으로 재확인 편리
 
+### 서비스 화면
+
+| 대학 이메일 인증 | 중고거래 상세 |
+|---|---|
+| <img width="228" height="355" alt="Image" src="https://github.com/user-attachments/assets/8053ae85-33a9-4d87-b77f-18d4907a92a0" /> | <img width="228" height="355" alt="Image" src="https://github.com/user-attachments/assets/3e44d429-85f6-426d-9f15-d74188c081ba" /> |
+
+| 실시간 채팅 | 커뮤니티 상세 |
+|---|---|
+| <img width="228" height="355" alt="Image" src="https://github.com/user-attachments/assets/c3477f71-33ac-4df6-a1d4-2af31d20f213" /> | <img width="228" height="355" alt="Image" src="https://github.com/user-attachments/assets/eeea4fe5-bec5-4299-803e-e8d0b472c8ea" /> |
+
 
 ## 기술 스택
 
